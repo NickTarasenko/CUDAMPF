@@ -163,6 +163,29 @@ typedef struct hmmer_profile_s {
 	int ddbound_vs; 								/* threshold precalculated for lazy DD evaluation */
 	int* ncj_move;									/* ONLY FOR H3: related to length of each seq */
 	/* ONLY FOR H3: NCJ loop = 0 */
+	
+	
+	/* ================================================================== */
+	/* ForwardFilter uses scaled swords: 8x signed 16-bit integer vectors */
+	/* ================================================================== */
+
+	/* This is for SIMD version kernel */
+	int fwdQ;										/* number of vectors */
+	__32int__ *fwd_vec;                             /* match emission */
+	__32int__ *fwd_vec;							/* match transition */
+
+	/* Single Values */
+	float   scale_f;                                 /* score units: typically 500 / log(2), 1/500 bits   */
+	int     base_f;                                  /* offset of sword scores: typically +12000          */
+	int     ddbound_f;                               /* threshold precalculated for lazy DD evaluation    */
+	//float   ncj_roundoff;                            /* missing precision on NN,CC,JJ after rounding      */
+
+	/* Striped Values */
+	int base_fs;									/* offset of sword scores: typically +12000 */
+	int E_lm_f;										/* ONLY FOR H3: E node's loop and move: wordify(-eslCONST_LOG2) */
+	int ddbound_fs; 								/* threshold precalculated for lazy DD evaluation */
+	int* ncj_move_f;									/* ONLY FOR H3: related to length of each seq */
+	/* ONLY FOR H3: NCJ loop = 0 */
 
 	/* ========================================================= */
 	/* Information about current configuration, size, allocation */

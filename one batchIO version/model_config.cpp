@@ -428,3 +428,103 @@ int vf_conversion(HMMER_PROFILE* hmm)
 
 	return fileOK;
 }
+
+/* ====================================================== Configuration for Forward ===================================================================== */
+
+/* ff_conversion() */
+int ff_conversion(HMMER_PROFILE* hmm)
+{
+	int     ddtmp;    				   		   /* used in finding worst DD transition bound */
+	int i, j, q, z, l, k, t;           		   /* index */
+	int maxval;						   		   /* constraint */
+	short val;						   		   /* temp value */
+	union { __32int__ v; short i[64]; } tmp;   /* use union for following assignment to each (short) value */
+
+	hmm->scale_w = 500.0 / eslCONST_LOG2;
+	hmm->base_f = 12000;
+
+	/* V3: Striped Match emission cost */
+	for (i = 0; i < PROTEIN_TYPE; i++)
+	{
+		for (q = 0, j = 1; q < hmm->fwdQ; q++, j++)
+		{
+			for (z = 0; z < 64; z++)
+				tmp.i[z] = ((j + z * hmm->fwdQ <= hmm->M) ? wordify(hmm, hmm->mat_32bits[j + z * hmm->fwdQ][i]) : 32768);
+
+			for (l = 0; l < 32; l++)
+				hmm->vit_vec[i * hmm->fwdQ + q][l] = tmp.v[l];
+		}
+	}
+	
+	/* V3: Striped Match emission cost */
+	for (i = 0; i < PROTEIN_TYPE; i++)
+	{
+		for (q = 0, j = 1; q < hmm->fwdQ; q++, j++)
+		{
+			for (z = 0; z < 64; z++)
+				tmp.i[z] = ((j + z * hmm->fwdQ <= hmm->M) ? wordify(hmm, hmm->mat_32bits[j + z * hmm->fwdQ][i]) : 32768);
+
+			for (l = 0; l < 32; l++)
+				hmm->vit_vec[i * hmm->fwdQ + q][l] = tmp.v[l];
+		}
+	}
+
+	/* Transition costs, all but the DD's. */
+	for (k = 0, q = 0; q < hmm->fwdQ; q++, k++)
+	{
+		for (t = B_M; t <= I_I; t++) 
+		{
+			switch (t)
+			{
+			case B_M: maxval = 0; break; /* gm has tBMk stored off by one! start from k=0 not 1   */
+			case M_M: maxval = 0; break; /* MM, DM, IM vectors are rotated by -1, start from k=0  */
+			case I_M: maxval = 0; break;
+			case D_M: maxval = 0; break;
+			case M_D: maxval = 0; break; /* the remaining ones are straight up  */
+			case M_I: maxval = 0; break;
+			case I_I: maxval = -1; break;
+			}
+
+			for (z = 0; z < 64; z++)
+			{
+				val = ((k + z * hmm->fwdQ < hmm->M) ? wordify(hmm, hmm->log_tran_32bits[k + z * hmm->fwdQ][t]) : -32768);
+				tmp.i[z] = (val <= maxval) ? val : maxval;   /* do not allow an II transition cost of 0, or hell may occur. */
+			}
+
+			for (l = 0; l < 32; l++)
+				hmm->trans_vec[q * 7 + t][l] = tmp.v[l];	// 7 is hard-coded since we have BM,MM,IM,DM,MD,MI,II in this loop...
+		}
+	}
+
+	/* Finally the DD's, which are at the end of the optimized tsc vector; (j is already sitting there) */
+	for (k = 0, q = 0; q < hmm->fwdQ; q++, k++)				// k = 0 is only for our case
+	{
+		for (z = 0; z < 64; z++)
+			tmp.i[z] = ((k + z * hmm->fwdQ < hmm->M) ? wordify(hmm, hmm->log_tran_32bits[k + z * hmm->fwdQ][D_D]) : -32768);
+
+		for (l = 0; l < 32; l++)
+			hmm->trans_vec[7 * hmm->fwdQ + q][l] = tmp.v[l];		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
+	}
+
+	/* Transition score bound for "lazy F" DD path evaluation (xref J2/52) */
+	hmm->ddbound_w = -32768;
+
+	for (int i = 1; i < (hmm->M - 1) - 1; i++)
+	{                                                                 
+		ddtmp = (int)wordify(hmm, hmm->log_tran_32bits[i][D_D]);          /* DD */
+		ddtmp += (int)wordify(hmm, hmm->log_tran_32bits[i + 2][D_M]);     /* DM */ 
+		ddtmp -= (int)wordify(hmm, hmm->log_tran_32bits[i + 2][B_M]);     /* BM */ 
+		hmm->ddbound_w = _MAX(hmm->ddbound_w, ddtmp);
+	}
+
+	/* Special nodes and parameters for kernel */
+	hmm->E_lm = simdlize_VIT((int)wordify(hmm, hmm->Xtran_32bits[E * XTRANS_TYPE + LOOP]));		/* E_LOOP,MOVE same */
+	hmm->base_vs = simdlize_VIT(hmm->base_w);													/* base_w */
+	hmm->ddbound_vs = simdlize_VIT(hmm->ddbound_w);												/* ddbound */
+
+	/* **************************************************************************************************** */
+	/* Until now, we have finished MATCH emission, main node transition, and partly special node transition */
+	/* **************************************************************************************************** */
+
+	return fileOK;
+}

@@ -284,6 +284,12 @@ int main(int argc, char* argv[])
 				32, opt_Reg, GRID, BLOCK);
 		}    	
     }
+/*	else if (!stpcmp(argv[1],"-fwd"))
+	{
+	}
+*/
+
+	
 
 	/* ***************************************** */
 	/* 		  6. Host & Device memory release  	 */
