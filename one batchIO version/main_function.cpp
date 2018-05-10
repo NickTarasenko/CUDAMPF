@@ -82,6 +82,9 @@ int main(int argc, char* argv[])
 	if (vf_conversion(hmm) != 1) printf("error!\n");
 
 	//Until now, all preparation works of Viterbi has been done!
+	
+	//vectorisation for forward/backward
+	if (fbf_conversion(hmm) != 1) printf("error!\n");
 
 	sdkStopTimer(&timer);
     printf("model process time: %f (ms)\n", sdkGetTimerValue(&timer));
@@ -283,7 +286,19 @@ int main(int argc, char* argv[])
 				iLen, sum, pValue,
 				32, opt_Reg, GRID, BLOCK);
 		}    	
-    }
+    } else if (!strcmp(argv[1], "-fwd")) {
+		printf("========== FWD Filter ==========\n");
+		
+		handle = read_kernel("RAW_FWD.cuh");
+		
+		opt_Reg = 32;
+		GRID = dim3(1, 24, 1);
+		BLOCK = dim3(WARP_SIZE, 32, 1);
+		RTC_FWD(number, handle, hmm,
+				seq_1D, offset, seq_len,
+				iLen, sum, pValue,
+				32, opt_Reg, GRID, BLOCK);
+	}
 
 	/* ***************************************** */
 	/* 		  6. Host & Device memory release  	 */

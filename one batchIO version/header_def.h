@@ -103,9 +103,11 @@ enum p7p_xtransitions_e {
 /* For the striped implementation */
 typedef unsigned int __32uint__[32]; 			//a data type consist of 32 unsigned int values...
 typedef int __32int__[32];						/* signed */
+typedef float __32float__[32];					//a data type consist of 32 float values
 
 #define NQB(X)  ( _MAX(2, ((((X)-1) / 128) + 1)) )   /* 128 uchars (for MSV) */
 #define NQW(X)	( _MAX(2, ((((X)-1) / 64 ) + 1)) )    /* 64 uwords (for VIT) */
+#define NQF(X)	( _MAX(2, ((((X)-1) / 32 ) + 1)) )    /* 32 float (for FB) */
 
 /**/
 typedef struct hmmer_profile_s {
@@ -164,6 +166,16 @@ typedef struct hmmer_profile_s {
 	int* ncj_move;									/* ONLY FOR H3: related to length of each seq */
 	/* ONLY FOR H3: NCJ loop = 0 */
 
+	/* ======================================== */
+	/* Raw data for Forward/Backward algorithms */
+	/* ======================================== */
+
+	int fbQ;
+	__32float__ *fb_mat;									/* match emission*/
+	__32float__ *fb_ins;									/* insert emisssion*/
+	__32float__ *fb_tran;									/* transition*/
+	
+	
 	/* ========================================================= */
 	/* Information about current configuration, size, allocation */
 	/* ========================================================= */
@@ -174,6 +186,7 @@ typedef struct hmmer_profile_s {
 	float  *f;           /* amino acid background frequencies                 */
 	float  nj;           /* expected # of J's: 0 or 1, uni vs. multihit       */
 
+	
 } HMMER_PROFILE;
 
 /**/
@@ -246,6 +259,10 @@ extern void RTC_MSV(unsigned int, const char*, HMMER_PROFILE*,
 	     unsigned int*, unsigned int, double*,
 	     int, int, dim3, dim3);
 extern void RTC_VIT(unsigned int, const char*, HMMER_PROFILE*,
+	     unsigned int*, unsigned int*, unsigned int*,
+	     unsigned int*, unsigned int, double*,
+	     int, int, dim3, dim3);
+extern void RTC_FWD(unsigned int, const char*, HMMER_PROFILE*,
 	     unsigned int*, unsigned int*, unsigned int*,
 	     unsigned int*, unsigned int, double*,
 	     int, int, dim3, dim3);

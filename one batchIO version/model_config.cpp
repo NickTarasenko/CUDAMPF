@@ -10,6 +10,7 @@
 #include <math.h>
 #include <string.h>
 #include <vector>
+#include <cfloat>
 
 #include "header_def.h"
 
@@ -122,6 +123,16 @@ HMMER_PROFILE* hmmer_profile_Create(int seq_size, int hmm_size)
 	om->base_vs = 0;
 	om->E_lm = 0;
 	om->ddbound_vs = 0;
+	
+	/* ================================================================== */
+	/* 						Forward/BackwardFilter  					  */
+	/* ================================================================== */
+	
+	om->fbQ = NOF(hmm_size);					printf("f/b %d\n",om->fbQ);
+	
+	om->fb_mat = (float*)malloc(om->M * PROTEIN_TYPE * sizeof(float)); /* allocate hmm_size * PROTEIN_TYPE match array */
+	om->fb_ins = (float*)malloc(om->M * PROTEIN_TYPE * sizeof(float)); /* allocate hmm_size * PROTEIN_TYPE insert array */
+	om->fb_mat = (float*)malloc(om->M * TRANS_TYPE * sizeof(float)); /* allocate hmm_size * TRANS_TYPE transition array */
 
 	return om;
 }
@@ -426,5 +437,58 @@ int vf_conversion(HMMER_PROFILE* hmm)
 	/* Until now, we have finished MATCH emission, main node transition, and partly special node transition */
 	/* **************************************************************************************************** */
 
+	return fileOK;
+}
+
+/* ====================================================== Configuration for Forward/Backward ===================================================================== */
+
+int fbf_conversion(HMMER_PROFILE* hmm)
+{
+	int t, i, j; 		// indexes
+	float val;
+	//__32float__ tmp;
+	
+	for (i = 0; i < PROTEIN_TYPE; i++)
+	{
+		for (q = 0, j = 1; q < hmm->fbQ; q++, j++)
+		{
+			for (l = 0; l < 32; l++)
+			{
+				hmm->fb_ins[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? ins_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
+				hmm->fb_mat[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? mat_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
+			}
+		}
+	}
+	
+	for (k = 0, q = 0; q < hmm->fbQ; q++, k++)
+	{
+		for (t = B_M; t <= I_I; t++) 
+		{
+			switch (t)
+			{
+			case B_M: maxval = 0; break; /* gm has tBMk stored off by one! start from k=0 not 1   */
+			case M_M: maxval = 0; break; /* MM, DM, IM vectors are rotated by -1, start from k=0  */
+			case I_M: maxval = 0; break;
+			case D_M: maxval = 0; break;
+			case M_D: maxval = 0; break; /* the remaining ones are straight up  */
+			case M_I: maxval = 0; break;
+			case I_I: maxval = -1; break;
+			}
+
+			for (l = 0; l < 32; l++)
+			{
+				val = ((k + z * hmm->fbQ < hmm->M) ? wordify(hmm, hmm->log_tran_32bits[k + z * hmm->fbQ][t]) : FLT_MIN);
+				hmm->trans_vec[q * 7 + t][l] = val;	// 7 is hard-coded since we have BM,MM,IM,DM,MD,MI,II in this loop...
+			}
+		}
+	}
+
+	/* Finally the DD's, which are at the end of the optimized tsc vector; (j is already sitting there) */
+	for (k = 0, q = 0; q < hmm->fbQ; q++, k++)				// k = 0 is only for our case
+	{
+		for (l = 0; l < 32; l++)
+			hmm->trans_vec[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? wordify(hmm, hmm->log_tran_32bits[k + z * hmm->fbQ][D_D]) : FLT_MIN);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
+	}
+	
 	return fileOK;
 }
