@@ -477,7 +477,7 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 
 			for (l = 0; l < 32; l++)
 			{
-				val = ((k + z * hmm->fbQ < hmm->M) ? wordify(hmm, hmm->log_tran_32bits[k + z * hmm->fbQ][t]) : FLT_MIN);
+				val = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][t] : FLT_MIN);
 				hmm->trans_vec[q * 7 + t][l] = val;	// 7 is hard-coded since we have BM,MM,IM,DM,MD,MI,II in this loop...
 			}
 		}
@@ -487,7 +487,7 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 	for (k = 0, q = 0; q < hmm->fbQ; q++, k++)				// k = 0 is only for our case
 	{
 		for (l = 0; l < 32; l++)
-			hmm->trans_vec[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? wordify(hmm, hmm->log_tran_32bits[k + z * hmm->fbQ][D_D]) : FLT_MIN);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
+			hmm->trans_vec[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][D_D] : FLT_MIN);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
 	}
 	
 	return fileOK;

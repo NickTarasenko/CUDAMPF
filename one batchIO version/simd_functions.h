@@ -2233,4 +2233,23 @@ static __device__ __forceinline__ unsigned int vsads4(unsigned int a, unsigned i
     return r;           // byte-wise sum of absolute differences of signed ints
 }
 
+//Approximate log(e^a + e^b)
+//Propaply need calculate "log(1.0 + expf(min-max)" on init state...
+static __device__ float flogsum(float a, float b)
+{
+	const float max = fmaxf(a, b);
+	const float min = fminf(a, b);
+	
+	return (min == 0xff800000 || (max-min) >= 15.7f) ? max : max + log(1.0 + expf(min-max)); //why 15.7f?
+}
+
+static __device__ float fadd4(float a, float b) 
+{
+	if (a == 0xff800000 && b == 0xff800000) return 0x7f800000;
+	if (a == 0xff800000) return b;
+	if (b == 0xff800000) return a;
+	return a + b;
+}
+
+
 #endif /* SIMD_FUNCTIONS_H__ */
