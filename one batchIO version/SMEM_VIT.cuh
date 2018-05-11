@@ -103,10 +103,10 @@ double mu, double lambda)
 					dmx = reorder_int16(dmx);
 					for (q = 0; q < Q; q++)
 					{
-						sv = vaddss2(xB, __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x]));
-						sv = vmaxs2(sv, vaddss2(mmx, __ldg(&tran[q * 224 + 1 * 32 + threadIdx.x])));
-						sv = vmaxs2(sv, vaddss2(imx, __ldg(&tran[q * 224 + 2 * 32 + threadIdx.x])));
-						sv = vmaxs2(sv, vaddss2(dmx, __ldg(&tran[q * 224 + 3 * 32 + threadIdx.x])));
+						sv = vaddss2(xB, __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x])); // B_M
+						sv = vmaxs2(sv, vaddss2(mmx, __ldg(&tran[q * 224 + 1 * 32 + threadIdx.x]))); //M_M
+						sv = vmaxs2(sv, vaddss2(imx, __ldg(&tran[q * 224 + 2 * 32 + threadIdx.x]))); //I_M
+						sv = vmaxs2(sv, vaddss2(dmx, __ldg(&tran[q * 224 + 3 * 32 + threadIdx.x]))); //D_M
 						sv = vaddss2(sv, __ldg(&mat[res_s + q * 32 + threadIdx.x]));
 						xE = vmaxs2(sv, xE);
 						mmx = MMX[threadIdx.y][q * 32 + threadIdx.x];

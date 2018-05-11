@@ -490,5 +490,7 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 			hmm->trans_vec[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][D_D] : FLT_MIN);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
 	}
 	
+	hmm->E_lm_fb = (int)round_DIY(hmm->Xtran_32bits[E * XTRANS_TYPE + LOOP]);		/* E_LOOP,MOVE same */
+	
 	return fileOK;
 }

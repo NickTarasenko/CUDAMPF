@@ -19,7 +19,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	CUfunction kernel;
 
 	checkCudaErrors(cuInit(0));
-	// checkCudaErrors(cuDeviceGet(&cuDevice, 0));
+	checkCudaErrors(cuDeviceGet(&cuDevice, 0));
 	checkCudaErrors(cuCtxCreate(&context, 0, cuDevice)); 
 
 	/*********************************************/
