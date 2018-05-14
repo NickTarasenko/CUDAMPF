@@ -2233,6 +2233,18 @@ static __device__ __forceinline__ unsigned int vsads4(unsigned int a, unsigned i
     return r;           // byte-wise sum of absolute differences of signed ints
 }
 
+#define LOGSUM_SCALE 	1000.0f
+#define LOGSUM_TBL		16000
+
+__device__ float flogsum_lookup[LOGSUM_TBL]; /* p7_LOGSUM_TBL=16000: (A-B) = 0..16 nats, steps of 0.001 */
+
+__device__ void flogsum()
+{
+	int i;
+	for (int i = 0; i < LOGSUM_TBL; i++)
+		flogsum_lookup[i] = log(1. + expf(-i / LOGSUM_SCALE));
+}	
+
 //Approximate log(e^a + e^b)
 //Propaply need calculate "log(1.0 + expf(min-max)" on init state...
 static __device__ float flogsum(float a, float b)
@@ -2240,7 +2252,7 @@ static __device__ float flogsum(float a, float b)
 	const float max = fmaxf(a, b);
 	const float min = fminf(a, b);
 	
-	return (min == 0xff800000 || (max-min) >= 15.7f) ? max : max + log(1.0 + expf(min-max)); //why 15.7f?
+	return (min == 0xff800000 || (max-min) >= 15.7f) ? max : max + flogsum_lookup[(int)((max-min)*LOGSUM_SCALE)]); //why 15.7f?
 }
 
 static __device__ float fadd4(float a, float b) 
