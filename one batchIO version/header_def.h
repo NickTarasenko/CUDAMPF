@@ -176,7 +176,6 @@ typedef struct hmmer_profile_s {
 	__32float__ *fb_tran;									/* transition*/
 	
 	int E_lm_fb;										/* ONLY FOR H3: E node's loop and move: wordify(-eslCONST_LOG2) */
-	int* f_ncj_move;									/* ONLY FOR H3: related to length of each seq */
 	
 	/* ========================================================= */
 	/* Information about current configuration, size, allocation */

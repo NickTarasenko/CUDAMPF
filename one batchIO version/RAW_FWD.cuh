@@ -13,10 +13,10 @@ double* sc, int* L, unsigned int* L_6r, float* mat, float* ins, float* tran,
 int QV, double mu, double lambda)									
 {
 	volatile __shared__ unsigned int cache[blockDim.y][blockDim.x]; //Temp var for element of sequence
-	volatile __shared__ float MMX[blockSize.y][Q * 32]; // remade to local memory (if hmm->M will be huge then will be not enough memory on SM)
-	volatile __shared__ float IMX[blockSize.y][Q * 32];
-	volatile __shared__ float DMX[blockSize.y][Q * 32];
-	const int operThread = blockDim.y * threadIdx.x + threadIdx.y; //Column of vectors
+	float MMX[Q]; //must check max size (can be overflow on GPU)
+	float IMX[Q];
+	float DMX[Q];
+	//const int operThread = blockDim.y * threadIdx.x + threadIdx.y; //Column of vectors
 	const int seqIdx = gridDim.y * blockIdx.y + threadIdx.y; //Index of seq
 	float mmx, imx, dmx;
 	float sv, dcv;
@@ -48,9 +48,9 @@ int QV, double mu, double lambda)
 	for (q = 0; q < Q; q++)
 	{
 		
-		MMX[threadIdx.y][q * 32 + threadIdx.x] = 0.0f; 
-		IMX[threadIdx.y][q * 32 + threadIdx.x] = 0.0f;
-		DMX[threadIdx.y][q * 32 + threadIdx.x] = 0.0f;
+		MMX[q] = 0.0f; 
+		IMX[q] = 0.0f;
+		DMX[q] = 0.0f;
 	}
 	
 	//Later here must be while for total > 768
@@ -78,11 +78,11 @@ int QV, double mu, double lambda)
 				if (res_s == 31) break;
 				res_s *= Q * 32;
 				
-				mmx = MMX[threadIdx.y][(Q - 1) * 32 + threadIdx.x];
+				mmx = MMX[Q - 1];
 				reorder_float32(mmx);
-				imx = IMX[threadIdx.y][(Q - 1) * 32 + threadIdx.x];
+				imx = IMX[Q - 1];
 				reorder_float32(imx);
-				dmx = DMX[threadIdx.y][(Q - 1) * 32 + threadIdx.x];
+				dmx = DMX[Q - 1];
 				reorder_float32(dmx);
 				
 				for (q = 0; q < Q; q++)
@@ -95,27 +95,27 @@ int QV, double mu, double lambda)
 					sv = sv + __ldg(&mat[res_s + q * 32 + threadIdx.x]);
 					xE = sv + xE;
 					
-					mmx = MMX[threadIdx.y][q * 32 + threadIdx.x];
-					imx = IMX[threadIdx.y][q * 32 + threadIdx.x];
-					dmx = DMX[threadIdx.y][q * 32 + threadIdx.x];
+					mmx = MMX[q];
+					imx = IMX[q];
+					dmx = DMX[q];
 					
-					MMX[threadIdx.y][q * 32 + threadIdx.x] = sv;
-					DMX[threadIdx.y][q * 32 + threadIdx.x] = dcv;
+					MMX[q = sv;
+					DMX[q] = dcv;
 					//delete state
 					dcv = sv + __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]); //M_D
 					//insert state
 					sv = mmx + (imx + __ldg(&tran[q * 224 + 5 * 32 + threadIdx.x])); //M_I
 					sv = sv + (imx + __ldg(&tran[q * 224 + 6 * 32 + threadIdx.x])); //I_I
-					IMX[threadIdx.y][q * 32 + threadIdx.x] = sv;
+					IMX[q] = sv;
 				}
 				
 				//For D_D path
 				reorder_float32(dcv);
-				DMX[threadIdx.y][threadIdx.x] = 0.0f;
+				DMX[0] = 0.0f;
 				for (q = 0; q < Q; 1++)
 				{
-					DMX[threadIdx.y][q * 32 + threadIdx.x] += dcv;
-					dcv = DMX[threadIdx.y][q * 32 + threadIdx.x] + __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]); //D_D
+					DMX[q] += dcv;
+					dcv = DMX[q] + __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]); //D_D
 				}
 				
 				// Serialization (?)
@@ -137,9 +137,9 @@ int QV, double mu, double lambda)
 					
 					for (q = 0; q < Q; q++)
 					{
-						MMX[threadIdx.y][q * 32 + threadIdx.x] += xE;
-						DMX[threadIdx.y][q * 32 + threadIdx.x] += xE;
-						IMX[threadIdx.y][q * 32 + threadIdx.x] += xE;
+						MMX[q] += xE;
+						DMX[q] += xE;
+						IMX[q] += xE;
 					}
 					
 					totscale += log(xE);
