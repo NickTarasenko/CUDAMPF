@@ -175,10 +175,8 @@ typedef struct hmmer_profile_s {
 	__32float__ *fb_ins;									/* insert emisssion*/
 	__32float__ *fb_tran;									/* transition*/
 	
-	//(?)
-	int base_fbs;									/* offset of sword scores: typically +12000 */
 	int E_lm_fb;										/* ONLY FOR H3: E node's loop and move: wordify(-eslCONST_LOG2) */
-	int ddbound_fbs; 								/* threshold precalculated for lazy DD evaluation */
+	int* f_ncj_move;									/* ONLY FOR H3: related to length of each seq */
 	
 	/* ========================================================= */
 	/* Information about current configuration, size, allocation */

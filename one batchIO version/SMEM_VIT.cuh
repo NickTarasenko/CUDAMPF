@@ -114,10 +114,10 @@ double mu, double lambda)
 						dmx = DMX[threadIdx.y][q * 32 + threadIdx.x];
 						MMX[threadIdx.y][q * 32 + threadIdx.x] = sv;
 						DMX[threadIdx.y][q * 32 + threadIdx.x] = dcv;
-						dcv = vaddss2(sv, __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]));
+						dcv = vaddss2(sv, __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x])); //M_D
 						Dmax = vmaxs2(dcv, Dmax);
-						sv = vaddss2(mmx, __ldg(&tran[q * 224 + 5 * 32 + threadIdx.x]));
-						sv = vmaxs2(sv, vaddss2(imx, __ldg(&tran[q * 224 + 6 * 32 + threadIdx.x])));
+						sv = vaddss2(mmx, __ldg(&tran[q * 224 + 5 * 32 + threadIdx.x])); // M_I
+						sv = vmaxs2(sv, vaddss2(imx, __ldg(&tran[q * 224 + 6 * 32 + threadIdx.x]))); //I_I
 						IMX[threadIdx.y][q * 32 + threadIdx.x] = sv;
 					}
 					xE = vmaxs2(xE, __shfl_xor(xE, 16));
