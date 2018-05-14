@@ -24,10 +24,11 @@ int QV, double mu, double lambda)
 	unsigned int LEN, OFF, res, res_s; //Mb use __shared__ ??
 	int xE, xJ, xB, xN, xC;
 	int q, i, j, z ; //indexes
+	float totscale;
 	
 	xE = 0.0f;
 	xJ = 0.0f;
-	xB = 0.0f; //!!!!!!!!!!!!!!!!
+	xB = 0.0f; 
 	xN = 1.0f;
 	xC = 0.0f;
 	mmx = 0.0f;
@@ -35,6 +36,7 @@ int QV, double mu, double lambda)
 	dmx = 0.0f;
 	sv = 0.0f;
 	
+	totscale = 0.0f;
 	
 	NCJ_MOVE = 0.0f;
 	
@@ -87,11 +89,11 @@ int QV, double mu, double lambda)
 				{
 					//match state
 					sv = xB + __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x]); //B_M
-					sv = flogsum(sv, (mmx + __ldg(&tran[q * 224 + 1 * 32 + threadIdx.x]))); //M_M
-					sv = flogsum(sv, (imx + __ldg(&tran[q * 224 + 2 * 32 + threadIdx.x]))); //I_M
-					sv = flogsum(sv, (dmx + __ldg(&tran[q * 224 + 3 * 32 + threadIdx.x]))); //D_M
+					sv = sv + (mmx + __ldg(&tran[q * 224 + 1 * 32 + threadIdx.x])); //M_M
+					sv = sv + (imx + __ldg(&tran[q * 224 + 2 * 32 + threadIdx.x])); //I_M
+					sv = sv + (dmx + __ldg(&tran[q * 224 + 3 * 32 + threadIdx.x])); //D_M
 					sv = sv + __ldg(&mat[res_s + q * 32 + threadIdx.x]);
-					xE = flogsum(sv, xE);
+					xE = sv + xE;
 					
 					mmx = MMX[threadIdx.y][q * 32 + threadIdx.x];
 					imx = IMX[threadIdx.y][q * 32 + threadIdx.x];
@@ -100,10 +102,10 @@ int QV, double mu, double lambda)
 					MMX[threadIdx.y][q * 32 + threadIdx.x] = sv;
 					DMX[threadIdx.y][q * 32 + threadIdx.x] = dcv;
 					//delete state
-					dcv = flogsum(sv, __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]); //M_D
+					dcv = sv + __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]); //M_D
 					//insert state
-					sv = flogsum(mmx, (imx + __ldg(&tran[q * 224 + 5 * 32 + threadIdx.x]))); //M_I
-					sv = flogsum(sv, (imx + __ldg(&tran[q * 224 + 6 * 32 + threadIdx.x]))); //I_I
+					sv = mmx + (imx + __ldg(&tran[q * 224 + 5 * 32 + threadIdx.x])); //M_I
+					sv = sv + (imx + __ldg(&tran[q * 224 + 6 * 32 + threadIdx.x])); //I_I
 					IMX[threadIdx.y][q * 32 + threadIdx.x] = sv;
 				}
 				
@@ -113,16 +115,43 @@ int QV, double mu, double lambda)
 				for (q = 0; q < Q; 1++)
 				{
 					DMX[threadIdx.y][q * 32 + threadIdx.x] += dcv;
-					dcv = flogsum(DMX[threadIdx.y][q * 32 + threadIdx.x], __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]); //D_D
+					dcv = DMX[threadIdx.y][q * 32 + threadIdx.x] + __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]); //D_D
 				}
 				
 				// Serialization (?)
 				
-				for (q = 0; q < Q; q++) xE 
+				for (q = 0; q < Q; q++) xE += DMX[threadIdx.y][q * 32 + threadIdx];
+				
+				//Check this realisation
+				xC += xE + e_lm;
+				xJ += xE + e_lm;
+				xB = xJ + NCJ_MOVE + xN + NCJ_MOVE;
+				
+				if (xE > 1.0e4)
+				{
+					xN = xN / xE;
+					xC = xC / xE;
+					xJ = xJ / xE;
+					xB = xB / xE;
+					xE = 1.0 / xE;
+					
+					for (q = 0; q < Q; q++)
+					{
+						MMX[threadIdx.y][q * 32 + threadIdx.x] += xE;
+						DMX[threadIdx.y][q * 32 + threadIdx.x] += xE;
+						IMX[threadIdx.y][q * 32 + threadIdx.x] += xE;
+					}
+					
+					totscale += log(xE);
+					xE = 1.0;
+				}
 			}
 		}
 	}
 	
+	//check over\underflow and NaN(?)
+	
+	sc[seqIdx] = totscale +  log(xC * NCJ_MOVE);
 }
 
 
