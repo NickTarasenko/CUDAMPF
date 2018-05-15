@@ -22,7 +22,7 @@ int QV, double mu, double lambda)
 	float sv, dcv;
 	int NCJ_MOVE;
 	unsigned int LEN, OFF, res, res_s; //Mb use __shared__ ??
-	int xE, xJ, xB, xN, xC;
+	float xE, xJ, xB, xN, xC;
 	int q, i, j, z ; //indexes
 	float totscale;
 	
