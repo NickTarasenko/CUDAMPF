@@ -128,11 +128,11 @@ HMMER_PROFILE* hmmer_profile_Create(int seq_size, int hmm_size)
 	/* 						Forward/BackwardFilter  					  */
 	/* ================================================================== */
 	
-	om->fbQ = NOF(hmm_size);					printf("f/b %d\n",om->fbQ);
+	om->fbQ = NQF(hmm_size);					printf("f/b %d\n",om->fbQ);
 	
-	om->fb_mat = (float*)malloc(om->M * PROTEIN_TYPE * sizeof(float)); /* allocate hmm_size * PROTEIN_TYPE match array */
-	om->fb_ins = (float*)malloc(om->M * PROTEIN_TYPE * sizeof(float)); /* allocate hmm_size * PROTEIN_TYPE insert array */
-	om->fb_mat = (float*)malloc(om->M * TRANS_TYPE * sizeof(float)); /* allocate hmm_size * TRANS_TYPE transition array */
+	om->fb_mat = (__32float__*)malloc(om->M * PROTEIN_TYPE * sizeof(float)); /* allocate hmm_size * PROTEIN_TYPE match array */
+	//om->fb_ins = (float*)malloc(om->M * PROTEIN_TYPE * sizeof(float)); /* allocate hmm_size * PROTEIN_TYPE insert array */
+	om->fb_mat = (__32float__*)malloc(om->M * TRANS_TYPE * sizeof(float)); /* allocate hmm_size * TRANS_TYPE transition array */
 
 	return om;
 }
@@ -444,7 +444,8 @@ int vf_conversion(HMMER_PROFILE* hmm)
 
 int fbf_conversion(HMMER_PROFILE* hmm)
 {
-	int t, i, j; 		// indexes
+	int t, i, j, q, l, k, z; 		// indexes
+	int maxval;
 	float val;
 	//__32float__ tmp;
 	
@@ -454,8 +455,8 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 		{
 			for (l = 0; l < 32; l++)
 			{
-				hmm->fb_ins[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? ins_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
-				hmm->fb_mat[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? mat_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
+				//hmm->fb_ins[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? ins_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
+				hmm->fb_mat[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? hmm->mat_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
 			}
 		}
 	}

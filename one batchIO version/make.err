@@ -1,0 +1,1 @@
+g++ -I/opt/cuda/samples/common/inc -I/opt/cuda/include   -o model_config.o -c model_config.cpp -I.

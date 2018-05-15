@@ -247,6 +247,7 @@ extern int log_Trans(HMMER_PROFILE*);
 extern int xTrans(HMMER_PROFILE*);
 extern short wordify(HMMER_PROFILE*, float);
 extern int vf_conversion(HMMER_PROFILE*);
+extern int fbf_conversion(HMMER_PROFILE*);
 extern unsigned int simdlize_MSV(unsigned int);
 extern void simd_NCJ_MOVE(int*, int, HMMER_PROFILE*, unsigned int);
 

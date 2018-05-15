@@ -34,7 +34,7 @@
 ################################################################################
 
 # Location of the CUDA Toolkit
-CUDA_PATH       ?= /usr/local/cuda-7.0
+CUDA_PATH       ?= /opt/cuda
 
 ##############################
 # start deprecated interface #
@@ -188,7 +188,7 @@ ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
 # Common includes and paths for CUDA
 # INCLUDES  := -I../../common/inc
-INCLUDES  := -I/usr/local/cuda-7.0/samples/common/inc
+INCLUDES  := -I/opt/cuda/samples/common/inc
 LIBRARIES :=
 
 ################################################################################
@@ -285,7 +285,7 @@ DEPS = header_def.h
 # -I will force compilor look in current dir for header files
 CFLAGS = -I.
 # all components for final executable
-OBJ = main_function.o model_config.o other_function.o read_file.o degenerate.o RTC_MSV.o RTC_VIT.o RTC_SSV.o
+OBJ = main_function.o model_config.o other_function.o read_file.o degenerate.o RTC_MSV.o RTC_VIT.o RTC_SSV.o RTC_FWD.o
 # special options in compile
 SPECIAL = -O3 -maxrregcount 64 --use_fast_math
 # special options in link
