@@ -131,15 +131,15 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 
 	//======================================================================================//
 	 /* dump log */																		//	
-     size_t logSize;																		//
-     NVRTC_SAFE_CALL("nvrtcGetProgramLogSize", nvrtcGetProgramLogSize(prog, &logSize));	//
-     char *log = (char *) malloc(sizeof(char) * logSize + 1);								//
-     NVRTC_SAFE_CALL("nvrtcGetProgramLog", nvrtcGetProgramLog(prog, log));				//
-     log[logSize] = '\x0';																//
-     std::cerr << "\n compilation log ---\n";												//
-     std::cerr << log;																	//
-     std::cerr << "\n end log ---\n";														//
-     free(log);																			//
+    //size_t logSize;																		//
+    //NVRTC_SAFE_CALL("nvrtcGetProgramLogSize", nvrtcGetProgramLogSize(prog, &logSize));	//
+    //char *log = (char *) malloc(sizeof(char) * logSize + 1);								//
+    //NVRTC_SAFE_CALL("nvrtcGetProgramLog", nvrtcGetProgramLog(prog, log));				//
+    //log[logSize] = '\x0';																//
+    //std::cerr << "\n compilation log ---\n";												//
+    //std::cerr << log;																	//
+    //std::cerr << "\n end log ---\n";														//
+    //free(log);																			//
 	//======================================================================================//
 	
 	/* NVRTC fetch PTX */

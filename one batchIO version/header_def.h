@@ -28,12 +28,22 @@
 #define force_local_size 40		  /* DONT MODIFY! this is for making sure local memory allocation */
 
 // Macro to catch CUDA errors in CUDA runtime calls
-#define NVRTC_SAFE_CALL(Name, x)                                             \
-  do {                                                                       \
-    nvrtcResult result = x;                                                  \
-    if (result != NVRTC_SUCCESS) {                                           \
-      std::cerr << "\nerror: " << Name << " failed with error " <<           \
-                                               nvrtcGetErrorString(result);  \
+#define NVRTC_SAFE_CALL(Name, x)                                             				\
+  do {                                                                       				\
+    nvrtcResult result = x;                                                  				\
+    if (result != NVRTC_SUCCESS) {                                           				\
+	size_t logSize;															 				\
+    NVRTC_SAFE_CALL("nvrtcGetProgramLogSize", nvrtcGetProgramLogSize(prog, &logSize));	  	\
+    char *log = (char *) malloc(sizeof(char) * logSize + 1);								\
+	NVRTC_SAFE_CALL("nvrtcGetProgramLog", nvrtcGetProgramLog(prog, log));					\
+    log[logSize] = '\x0';																	\
+    std::cerr << "\n compilation log ---\n";												\
+    std::cerr << log;																		\
+    std::cerr << "\n end log ---\n";														\
+    free(log);																				\
+	} while (0)
+      //std::cerr << "\nerror: " << Name << " failed with error " <<           \
+       //                                       nvrtcGetErrorString(result);  \
       exit(1);                                                               \
     }                                                                        \
   } while(0)
