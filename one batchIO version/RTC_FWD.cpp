@@ -34,7 +34,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     sdkStartTimer(&timer);
 
    	/* Driver API pointers */
-	CUdeviceptr d_seq, d_offset, d_len, d_len_6r, mat_v, ins_v, trans, score;
+	CUdeviceptr d_seq, d_offset, d_len, d_len_6r, mat_v, trans, score;
 
 	/* Allocation */
 	checkCudaErrors(cuMemAlloc(&d_seq, sum * sizeof(unsigned int)));							/* copy 1D database */
@@ -42,7 +42,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	checkCudaErrors(cuMemAlloc(&d_len, number * sizeof(unsigned int)));							/* copy raw length of each seq */
 	checkCudaErrors(cuMemAlloc(&d_len_6r, number * sizeof(unsigned int)));						/* copy padding length of each seq */
 	checkCudaErrors(cuMemAlloc(&mat_v, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));		/* striped EMISSION match score */
-	checkCudaErrors(cuMemAlloc(&ins_v, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));		/* striped EMISSION insert score */
+	//checkCudaErrors(cuMemAlloc(&ins_v, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));		/* striped EMISSION insert score */
 	checkCudaErrors(cuMemAlloc(&trans, hmm->fbQ * TRANS_TYPE * sizeof(__32float__)));		/* striped transition score */
 	checkCudaErrors(cuMemAlloc(&score, number * sizeof(double)));								/* P-Value as output */
 
@@ -52,8 +52,8 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	checkCudaErrors(cuMemcpyHtoD(d_len, seq_len, number * sizeof(unsigned int)));
 	checkCudaErrors(cuMemcpyHtoD(d_len_6r, iLen, number * sizeof(unsigned int)));
 	checkCudaErrors(cuMemcpyHtoD(mat_v, hmm->fb_mat, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));
-	checkCudaErrors(cuMemcpyHtoD(ins_v, hmm->fb_ins, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));
-	checkCudaErrors(cuMemcpyHtoD(trans, hmm->fb_tran, hmm->fbQ * TRANS_TYPE * sizeof(__32float__)));
+	//checkCudaErrors(cuMemcpyHtoD(ins_v, hmm->fb_ins, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));
+	checkCudaErrors(cuMemcpyHtoD(trans, hmm->fb_trans, hmm->fbQ * TRANS_TYPE * sizeof(__32float__)));
 		
 	sdkStopTimer(&timer);
     printf("Alloc & H to D Copy time: %f (ms)\n", sdkGetTimerValue(&timer));
@@ -169,7 +169,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1);
    /* parameters for kernel funciton */
 	void *arr[] = { &d_seq, &number, &d_offset,
-					&score, &d_len, &d_len_6r, &mat_v, &ins_v, &trans, 
+					&score, &d_len, &d_len_6r, &mat_v, &trans, 
 					&(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
 
 	/* launch kernel */

@@ -130,9 +130,9 @@ HMMER_PROFILE* hmmer_profile_Create(int seq_size, int hmm_size)
 	
 	om->fbQ = NQF(hmm_size);					printf("f/b %d\n",om->fbQ);
 	
-	om->fb_mat = (__32float__*)malloc(om->M * PROTEIN_TYPE * sizeof(float)); /* allocate hmm_size * PROTEIN_TYPE match array */
+	om->fb_mat = (__32float__*)malloc(om->fbQ * PROTEIN_TYPE * sizeof(__32float__)); /* allocate hmm_size * PROTEIN_TYPE match array */
 	//om->fb_ins = (float*)malloc(om->M * PROTEIN_TYPE * sizeof(float)); /* allocate hmm_size * PROTEIN_TYPE insert array */
-	om->fb_mat = (__32float__*)malloc(om->M * TRANS_TYPE * sizeof(float)); /* allocate hmm_size * TRANS_TYPE transition array */
+	om->fb_trans = (__32float__*)malloc(om->fbQ * TRANS_TYPE * sizeof(__32float__)); /* allocate hmm_size * TRANS_TYPE transition array */
 
 	return om;
 }
@@ -449,6 +449,7 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 	float val;
 	//__32float__ tmp;
 	
+	//printf("Vectorisation for emission prob...\n");
 	for (i = 0; i < PROTEIN_TYPE; i++)
 	{
 		for (q = 0, j = 1; q < hmm->fbQ; q++, j++)
@@ -461,6 +462,7 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 		}
 	}
 	
+	//printf("Vectorisation for trans prob...\n");
 	for (k = 0, q = 0; q < hmm->fbQ; q++, k++)
 	{
 		for (t = B_M; t <= I_I; t++) 
@@ -479,19 +481,20 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 			for (l = 0; l < 32; l++)
 			{
 				val = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][t] : FLT_MIN);
-				hmm->trans_vec[q * 7 + t][l] = val;	// 7 is hard-coded since we have BM,MM,IM,DM,MD,MI,II in this loop...
+				hmm->fb_trans[q * 7 + t][l] = val;	// 7 is hard-coded since we have BM,MM,IM,DM,MD,MI,II in this loop...
 			}
 		}
 	}
 
+	
 	/* Finally the DD's, which are at the end of the optimized tsc vector; (j is already sitting there) */
 	for (k = 0, q = 0; q < hmm->fbQ; q++, k++)				// k = 0 is only for our case
 	{
 		for (l = 0; l < 32; l++)
-			hmm->trans_vec[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][D_D] : FLT_MIN);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
+			hmm->fb_trans[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][D_D] : FLT_MIN);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
 	}
 	
 	hmm->E_lm_fb = (int)round_DIY(hmm->Xtran_32bits[E * XTRANS_TYPE + LOOP]);		/* E_LOOP,MOVE same */
-	
+	//printf("Finish fbf_conversion...\n");
 	return fileOK;
 }

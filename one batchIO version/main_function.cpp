@@ -10,9 +10,9 @@ int main(int argc, char* argv[])
 {
 	/* Input Parameters */
 	printf("Your input is: %s\n", argv[1]);
-	if(strcmp(argv[1],"-msv") && strcmp(argv[1],"-ssv") && strcmp(argv[1],"-vit"))
+	if(strcmp(argv[1],"-msv") && strcmp(argv[1],"-ssv") && strcmp(argv[1],"-vit") && strcmp(argv[1],"-fwd"))
 	{
-        std::cerr << "\nerror input options: " << argv[1] << "! must be -ssv -msv -vit!\n";
+        std::cerr << "\nerror input options: " << argv[1] << "! must be -ssv -msv -vit -fwd!\n";
         exit(1);
 	}
 	char *seqdb_filename;
@@ -41,8 +41,8 @@ int main(int argc, char* argv[])
 	/* 		1. Parameters, match, insert emission 		*/
 	/* ************************************************ */
 	StopWatchInterface *timer;
-    sdkCreateTimer(&timer);
-    sdkStartTimer(&timer);
+	sdkCreateTimer(&timer);
+	sdkStartTimer(&timer);
 
 	/* get parameters (M, MU[], LAMBDA[]) */
 	if (get_Parameters(hmm, model_filename) != 1) printf("error!\n");
@@ -82,13 +82,13 @@ int main(int argc, char* argv[])
 	if (vf_conversion(hmm) != 1) printf("error!\n");
 
 	//Until now, all preparation works of Viterbi has been done!
-	
+	//printf("Starting fbf_conversion...\n");
 	//vectorisation for forward/backward
 	if (fbf_conversion(hmm) != 1) printf("error!\n");
 
 	sdkStopTimer(&timer);
-    printf("model process time: %f (ms)\n", sdkGetTimerValue(&timer));
-    sdkDeleteTimer(&timer);
+	printf("model process time: %f (ms)\n", sdkGetTimerValue(&timer));
+	sdkDeleteTimer(&timer);
 
 	/* **************************************************************************** */
 	/* 		3. Protein sequence database read and pre-process               		*/

@@ -9,7 +9,7 @@
 
 extern "C" __global__
 void KERNEL(unsigned int* seq, unsigned int total, unsigned int* offset,
-double* sc, int* L, unsigned int* L_6r, float* mat, float* ins, float* tran,
+double* sc, int* L, unsigned int* L_6r, float* mat, float* tran,
 int QV, double mu, double lambda)									
 {
 	volatile __shared__ unsigned int cache[blockDim.y][blockDim.x]; //Temp var for element of sequence

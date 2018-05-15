@@ -172,8 +172,8 @@ typedef struct hmmer_profile_s {
 
 	int fbQ;
 	__32float__ *fb_mat;									/* match emission*/
-	__32float__ *fb_ins;									/* insert emisssion*/
-	__32float__ *fb_tran;									/* transition*/
+	//__32float__ *fb_ins;									/* insert emisssion*/
+	__32float__ *fb_trans;									/* transition*/
 	
 	int E_lm_fb;										/* ONLY FOR H3: E node's loop and move: wordify(-eslCONST_LOG2) */
 	
