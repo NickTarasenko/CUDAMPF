@@ -3,14 +3,18 @@
  * MMX/IMX/DMX are stored in local memory
 */
 
+#include "header_def.h"
+#include "simd_def.h"
+#include "simd_function.h"
+
 
 #ifndef _SHAREDMEMORY_KERNEL_FWD_
 #define _SHAREDMEMORY_KERNEL_FWD_
 
-extern "C" __global__
+extern "C" __global__ 
 void KERNEL(unsigned int* seq, unsigned int total, unsigned int* offset,
-double* sc, int* L, unsigned int* L_6r, float* mat, float* tran,
-int QV, double mu, double lambda)									
+double* sc, int* L,  unsigned int* L_6r, float* mat, float* tran,
+int e_lm, int QV, double mu, double lambda)									
 {
 	volatile __shared__ unsigned int cache[blockDim.y][blockDim.x]; //Temp var for element of sequence
 	float MMX[Q]; //must check max size (can be overflow on GPU)

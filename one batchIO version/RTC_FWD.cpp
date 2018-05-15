@@ -170,7 +170,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
    /* parameters for kernel funciton */
 	void *arr[] = { &d_seq, &number, &d_offset,
 					&score, &d_len, &d_len_6r, &mat_v, &trans, 
-					&(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
+					&(hmm->E_lm_fb), &(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
 
 	/* launch kernel */
         checkCudaErrors(cuLaunchKernel(	kernel,
