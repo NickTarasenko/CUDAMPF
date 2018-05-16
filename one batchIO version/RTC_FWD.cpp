@@ -64,15 +64,15 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	/********************************************************/
     sdkCreateTimer(&timer);
     sdkStartTimer(&timer);
-
+    printf("--- NVRTC create handle...\n");
 	/* NVRTC create handle */
 	nvrtcProgram prog;
-	NVRTC_SAFE_CALL("nvrtcCreateProgram", nvrtcCreateProgram(&prog,				// prog
-															 GPU_kernel,		// buffer
-															 NULL,				// name: CUDA program name. name can be NULL; “default_program” is used when it is NULL.
-															 0,					// numHeaders (I put header file path with -I later)
-															 NULL,				// headers' content
-															 NULL));			// include full name of headers
+	NVRTC_SAFE_CALL("nvrtcCreateProgram", nvrtcCreateProgram(&prog,			// prog
+								 GPU_kernel,		// buffer
+								 NULL,			// name: CUDA program name. name can be NULL; “default_program” is used when it is NULL.
+								 0,			// numHeaders (I put header file path with -I later)
+								 NULL,			// headers' content
+								 NULL));		// include full name of headers
 
 	/* 1. eliminate const through pointer */
     char *a = NULL;
@@ -84,26 +84,26 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     //char* aa = &a_value;
     //const char *&bb = aa;		// no way with const
     //const char**&ref = aa;	// no way
-
+    printf("--- Set dynamic options...\n");
     /* Dynamic Options */
     char **test_char = new char*[8];
 
-    test_char[0] = new char[__INCLUDE__.length() + strlen("simd_def.h") + 1];					// #include simd_def.h
+    test_char[0] = new char[__INCLUDE__.length() + strlen("simd_def.h") + 1];				// #include simd_def.h
 	strcpy(test_char[0], get_option(__INCLUDE__, "simd_def.h").c_str());
 
-    test_char[1] = new char[__INCLUDE__.length() + strlen("simd_functions.h") + 1];				// #include simd_functions.h
+    test_char[1] = new char[__INCLUDE__.length() + strlen("simd_functions.h") + 1];			// #include simd_functions.h
     strcpy(test_char[1], get_option(__INCLUDE__, "simd_functions.h").c_str());
 
-    test_char[2] = new char[__RDC__.length() + __F__.length() + 1];								// -rdc=false
+    test_char[2] = new char[__RDC__.length() + __F__.length() + 1];					// -rdc=false
     strcpy(test_char[2], get_option(__RDC__, __F__).c_str());
 
-    test_char[3] = new char[__ARCH__.length() + __CC35__.length() + 1];							// -arch=compute_35
+    test_char[3] = new char[__ARCH__.length() + __CC35__.length() + 1];					// -arch=compute_35
     strcpy(test_char[3], get_option(__ARCH__, __CC35__).c_str());
 
-    test_char[4] = new char[__MAXREG__.length() + int2str(maxreg).length() + 1];				// -maxrregcount = <?>
+    test_char[4] = new char[__MAXREG__.length() + int2str(maxreg).length() + 1];			// -maxrregcount = <?>
     strcpy(test_char[4], get_option(__MAXREG__, int2str(maxreg)).c_str());
 
-    test_char[5] = new char[__RIB__.length() + int2str(warp).length() + 1];						// #define RIB <?> : warps per block
+    test_char[5] = new char[__RIB__.length() + int2str(warp).length() + 1];				// #define RIB <?> : warps per block
     strcpy(test_char[5], get_option(__RIB__, int2str(warp)).c_str());
 
     test_char[6] = new char[__SIZE__.length() + int2str((int)force_local_size).length() + 1];	// #define SIZE 40
@@ -119,7 +119,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     /* 2. change const char** through reference */
     char** &test_ref = const_cast<char** &>(opts);
     test_ref = test_char;
-
+    printf("--- NVRTC compile...");
     /* NVRTC compile */
 	NVRTC_SAFE_CALL("nvrtcCompileProgram", nvrtcCompileProgram(prog,	// prog
 															   8,		// numOptions
@@ -130,16 +130,16 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     sdkDeleteTimer(&timer);
 
 	//======================================================================================//
-	// /* dump log */																		//	
-    // size_t logSize;																		//
-    // NVRTC_SAFE_CALL("nvrtcGetProgramLogSize", nvrtcGetProgramLogSize(prog, &logSize));	//
-    // char *log = (char *) malloc(sizeof(char) * logSize + 1);								//
-    // NVRTC_SAFE_CALL("nvrtcGetProgramLog", nvrtcGetProgramLog(prog, log));				//
-    // log[logSize] = '\x0';																//
-    // std::cerr << "\n compilation log ---\n";												//
-    // std::cerr << log;																	//
-    // std::cerr << "\n end log ---\n";														//
-    // free(log);																			//
+	 /* dump log */																		//	
+     size_t logSize;																		//
+     NVRTC_SAFE_CALL("nvrtcGetProgramLogSize", nvrtcGetProgramLogSize(prog, &logSize));	//
+     char *log = (char *) malloc(sizeof(char) * logSize + 1);								//
+     NVRTC_SAFE_CALL("nvrtcGetProgramLog", nvrtcGetProgramLog(prog, log));				//
+     log[logSize] = '\x0';																//
+     std::cerr << "\n compilation log ---\n";												//
+     std::cerr << log;																	//
+     std::cerr << "\n end log ---\n";														//
+     free(log);																			//
 	//======================================================================================//
 	
 	/* NVRTC fetch PTX */

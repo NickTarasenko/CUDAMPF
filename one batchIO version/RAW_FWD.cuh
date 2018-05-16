@@ -49,6 +49,8 @@ int e_lm, int QV, double mu, double lambda)
 	res = 0;
 	res_s = 0;
 	
+	init_flogsum();
+	
 	for (q = 0; q < Q; q++)
 	{
 		

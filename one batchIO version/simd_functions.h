@@ -2238,7 +2238,7 @@ static __device__ __forceinline__ unsigned int vsads4(unsigned int a, unsigned i
 
 __device__ float flogsum_lookup[LOGSUM_TBL]; /* p7_LOGSUM_TBL=16000: (A-B) = 0..16 nats, steps of 0.001 */
 
-__device__ void flogsum()
+__device__ void init_flogsum()
 {
 	int i;
 	for (int i = 0; i < LOGSUM_TBL; i++)
