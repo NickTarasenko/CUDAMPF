@@ -2241,7 +2241,7 @@ __device__ float flogsum_lookup[LOGSUM_TBL]; /* p7_LOGSUM_TBL=16000: (A-B) = 0..
 __device__ void init_flogsum()
 {
 	int i;
-	for (int i = 0; i < LOGSUM_TBL; i++)
+	for (i = 0; i < LOGSUM_TBL; i++)
 		flogsum_lookup[i] = log(1. + expf(-i / LOGSUM_SCALE));
 }	
 
@@ -2252,7 +2252,7 @@ static __device__ float flogsum(float a, float b)
 	const float max = fmaxf(a, b);
 	const float min = fminf(a, b);
 	
-	return (min == 0xff800000 || (max-min) >= 15.7f) ? max : max + flogsum_lookup[(int)((max-min)*LOGSUM_SCALE)]); //why 15.7f?
+	return (min == 0xff800000 || (max-min) >= 15.7f) ? max : max + flogsum_lookup[(int)((max-min)*LOGSUM_SCALE)]; //why 15.7f?
 }
 
 static __device__ float fadd4(float a, float b) 

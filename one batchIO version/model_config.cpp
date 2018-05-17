@@ -445,7 +445,6 @@ int vf_conversion(HMMER_PROFILE* hmm)
 int fbf_conversion(HMMER_PROFILE* hmm)
 {
 	int t, i, j, q, l, k, z; 		// indexes
-	int maxval;
 	float val;
 	//__32float__ tmp;
 	
@@ -457,30 +456,31 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 			for (l = 0; l < 32; l++)
 			{
 				//hmm->fb_ins[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? ins_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
-				hmm->fb_mat[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? hmm->mat_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
+				hmm->fb_mat[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? hmm->mat_32bits[j + z * hmm->fbQ][i] : -INFINITY);
 			}
 		}
 	}
 	
 	//printf("Vectorisation for trans prob...\n");
-	for (k = 0, q = 0; q < hmm->fbQ; q++, k++)
+	for (k = 1, q = 0; q < hmm->fbQ; q++, k++)
 	{
+		int kb;
 		for (t = B_M; t <= I_I; t++) 
 		{
 			switch (t)
 			{
-			case B_M: maxval = 0; break; /* gm has tBMk stored off by one! start from k=0 not 1   */
-			case M_M: maxval = 0; break; /* MM, DM, IM vectors are rotated by -1, start from k=0  */
-			case I_M: maxval = 0; break;
-			case D_M: maxval = 0; break;
-			case M_D: maxval = 0; break; /* the remaining ones are straight up  */
-			case M_I: maxval = 0; break;
-			case I_I: maxval = -1; break;
+			case B_M: kb = k - 1; break; /* gm has tBMk stored off by one! start from k=0 not 1   */
+			case M_M: kb = k - 1; break; /* MM, DM, IM vectors are rotated by -1, start from k=0  */
+			case I_M: kb = k - 1; break;
+			case D_M: kb = k - 1; break;
+			case M_D: kb = k; break; /* the remaining ones are straight up  */
+			case M_I: kb = k; break;
+			case I_I: kb = k; break;
 			}
 
 			for (l = 0; l < 32; l++)
 			{
-				val = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][t] : FLT_MIN);
+				val = ((kb + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[kb + z * hmm->fbQ][t] : -INFINITY);
 				hmm->fb_trans[q * 7 + t][l] = val;	// 7 is hard-coded since we have BM,MM,IM,DM,MD,MI,II in this loop...
 			}
 		}
@@ -488,10 +488,10 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 
 	
 	/* Finally the DD's, which are at the end of the optimized tsc vector; (j is already sitting there) */
-	for (k = 0, q = 0; q < hmm->fbQ; q++, k++)				// k = 0 is only for our case
+	for (k = 1, q = 0; q < hmm->fbQ; q++, k++)				// k = 0 is only for our case
 	{
 		for (l = 0; l < 32; l++)
-			hmm->fb_trans[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][D_D] : FLT_MIN);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
+			hmm->fb_trans[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][D_D] : INFINITY);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
 	}
 	
 	hmm->E_lm_fb = (int)round_DIY(hmm->Xtran_32bits[E * XTRANS_TYPE + LOOP]);		/* E_LOOP,MOVE same */

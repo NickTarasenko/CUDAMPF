@@ -172,6 +172,8 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 					&score, &d_len, &d_len_6r, &mat_v, &trans, 
 					&(hmm->E_lm_fb), &(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
 
+					printf("#$#$#$# MU = %f  LAMBDA = %f #$#$#$#", hmm->MU[1], hmm->LAMBDA[1]);
+
 	/* launch kernel */
         checkCudaErrors(cuLaunchKernel(	kernel,
 								  	GRID.x, GRID.y, GRID.z,		/* grid dim */
@@ -182,6 +184,8 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 
 	/* wait for kernel finish */
 	checkCudaErrors(cuCtxSynchronize());			/* block for a context's task to complete */
+
+    printf("Oups..\n");
 
 	sdkStopTimer(&timer);
     printf("Kernel time: %f (ms)\n", sdkGetTimerValue(&timer));
@@ -198,6 +202,8 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
    	sdkStopTimer(&timer);
     printf("D to H copy time: %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);
+
+    printf("#### FWD = %f ####", pVal[0]);
 
     /* count the number of seqs pass */
 	unsigned long pass_vit = 0;			/* # of seqs pass vit */

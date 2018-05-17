@@ -33,19 +33,16 @@
     nvrtcResult result = x;                                                  				\
     if (result != NVRTC_SUCCESS) {                                           				\
 	size_t logSize;															 				\
-    NVRTC_SAFE_CALL("nvrtcGetProgramLogSize", nvrtcGetProgramLogSize(prog, &logSize));	  	\
+    nvrtcGetProgramLogSize(prog, &logSize);	  	\
     char *log = (char *) malloc(sizeof(char) * logSize + 1);								\
-	NVRTC_SAFE_CALL("nvrtcGetProgramLog", nvrtcGetProgramLog(prog, log));					\
+	nvrtcGetProgramLog(prog, log);					\
     log[logSize] = '\x0';																	\
-    std::cerr << "\n compilation log ---\n";												\
-    std::cerr << log;																		\
-    std::cerr << "\n end log ---\n";														\
+    printf("\n compilation log ---\n");												\
+    printf(log);																		\
+    printf("\n end log ---\n");														\
     free(log);																				\
-	} while (0)
-      //std::cerr << "\nerror: " << Name << " failed with error " <<           \
-       //                                       nvrtcGetErrorString(result);  \
-      exit(1);                                                               \
-    }                                                                        \
+      exit(1);                                                               				\
+    }                                                                        				\
   } while(0)
 
 
