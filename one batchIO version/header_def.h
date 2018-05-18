@@ -110,7 +110,7 @@ enum p7p_xtransitions_e {
 /* For the striped implementation */
 typedef unsigned int __32uint__[32]; 			//a data type consist of 32 unsigned int values...
 typedef int __32int__[32];						/* signed */
-typedef float __32float__[4];					//a data type consist of 32 float values
+typedef float __32float__[32];					//a data type consist of 32 float values
 
 #define NQB(X)  ( _MAX(2, ((((X)-1) / 128) + 1)) )   /* 128 uchars (for MSV) */
 #define NQW(X)	( _MAX(2, ((((X)-1) / 64 ) + 1)) )    /* 64 uwords (for VIT) */

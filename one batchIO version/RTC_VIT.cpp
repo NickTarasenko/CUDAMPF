@@ -182,8 +182,6 @@ void RTC_VIT(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	/* wait for kernel finish */
 	checkCudaErrors(cuCtxSynchronize());			/* block for a context's task to complete */
 
-    printf("#### VIT = %f ####\n", pVal[0]);
-
 	sdkStopTimer(&timer);
     printf("Kernel time: %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);
@@ -195,6 +193,8 @@ void RTC_VIT(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     sdkStartTimer(&timer);
 
     checkCudaErrors(cuMemcpyDtoH(pVal, score, number * sizeof(double)));
+
+    printf("#### vit = %f ####\n", pVal[0]);
 
    	sdkStopTimer(&timer);
     printf("D to H copy time: %f (ms)\n", sdkGetTimerValue(&timer));

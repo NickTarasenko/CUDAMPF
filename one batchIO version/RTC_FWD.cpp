@@ -88,7 +88,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     //const char**&ref = aa;	// no way
     printf("--- Set dynamic options...\n");
     /* Dynamic Options */
-    char **test_char = new char*[8];
+    char **test_char = new char*[9];
 
     test_char[0] = new char[__INCLUDE__.length() + strlen("simd_def.h") + 1];				// #include simd_def.h
 	strcpy(test_char[0], get_option(__INCLUDE__, "simd_def.h").c_str());
@@ -113,6 +113,9 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 
     test_char[7] = new char[__Q__.length() + int2str(hmm->fbQ).length() + 1];					// #define Q <?>
     strcpy(test_char[7], get_option(__Q__, int2str(hmm->fbQ)).c_str());
+
+    test_char[8] = new char[2];					// DEBUG
+    strcpy(test_char[8], get_option(__DBUG__);
 
     /* 1. change const char** through pointer */
     //char* **test = const_cast<char** *>(&opts);

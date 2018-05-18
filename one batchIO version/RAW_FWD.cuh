@@ -19,10 +19,10 @@ int e_lm, int QV, double mu, double lambda)
 	const int seqIdx = gridDim.y * blockIdx.y + threadIdx.y; //Index of seq
 	float mmx, imx, dmx;
 	float sv, sv1, dcv;
-	int NCJ_MOVE;
+	float NCJ_MOVE;
 	unsigned int LEN, OFF, res, res_s; //Mb use __shared__ ??
-	float xE, xJ, xN, xC, xBt, nullsv;
-	__shared__ float xB;
+	__shared__ float xE, xJ, xN, xC, xB, nullsv;
+	__shared__ float xEt;
 	int q, i, j, z, h ; //indexes
 	float totscale;
 
@@ -33,7 +33,7 @@ int e_lm, int QV, double mu, double lambda)
 
 	xE = 0.0f;
 	xJ = 0.0f;
-	xB = NCJ_MOVE; 
+	if (threadIdx.x == 0) xB = NCJ_MOVE; 
 	xN = 1.0f;
 	xC = 0.0f;
 
@@ -43,7 +43,7 @@ int e_lm, int QV, double mu, double lambda)
 	
 	totscale = 0.0f;
 	
-	NCJ_MOVE = 0.0f;
+	//NCJ_MOVE = 0.0f;
 	
 	LEN = 0;
 	OFF = 0;
@@ -64,7 +64,8 @@ int e_lm, int QV, double mu, double lambda)
 	LEN = L_6r[seqIdx];
 	OFF = offset[seqIdx];
 	
-	NCJ_MOVE = 3.0f / (float)(L[seqIdx] + 3.0f);
+	NCJ_MOVE = (float) 3.0f / (float)(L[seqIdx] + 3.0f);
+	//printf("%f      %f\n", NCJ_MOVE, 3.0f);
 
 	//nullsv = (float) LEN * logf((float) LEN / (LEN + 1)) + log(1.0- (float) LEN / (LEN + 1));
 	
@@ -74,8 +75,6 @@ int e_lm, int QV, double mu, double lambda)
 		
 		for (j = 0; j < 32; j++)
 		{
-			
-			if (threadIdx.x == 0) printf("%f\n", &mat[0]);
 			//if (threadIdx.x == 0) printf("FWD # warp: %d ## thread: %d # Get new elem of seq...\n", threadIdx.y, threadIdx.x);
 
 			res = cache[threadIdx.y][j];	
@@ -92,7 +91,7 @@ int e_lm, int QV, double mu, double lambda)
 				dcv = 0.0f;
 
 				//  
-				xBt = xB;
+				//xBt = xB;
 
 				mmx = MMX[Q - 1];
 				reorder_float32(mmx);
@@ -105,17 +104,18 @@ int e_lm, int QV, double mu, double lambda)
 				{
 					// sv - accumulator 
 					//match state
-					sv = xBt * __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x]); //B_M
-					//if (threadIdx.x == 3) printf("FWD # warp: %d ## thread: %d # 1. tran[q * 224 + 0 * 32 + threadIdx.x] = %f\n", threadIdx.y, threadIdx.x, __ldg(&tran[q * 224 + 4 * 32 + threadIdx.x]));
-					//if (threadIdx.x == 3) printf("FWD # warp: %d ## thread: %d # 1. sv = %f\n", threadIdx.y, threadIdx.x, sv);
+					sv = xB * __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x]); //B_M
+					//printf("%f    %f\n", xBt, xB);
+					//if (threadIdx.x == 0) printf("FWD # warp: %d ## thread: %d # xB(%f) * tran(%f) = sv(%f\n)", threadIdx.y, threadIdx.x, xB, __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x]), sv);
 					sv = sv + mmx * __ldg(&tran[q * 224 + 1 * 32 + threadIdx.x]); //M_M
 					sv1 = imx * __ldg(&tran[q * 224 + 2 * 32 + threadIdx.x]); //I_M
 					sv1 = sv1 + dmx * __ldg(&tran[q * 224 + 3 * 32 + threadIdx.x]); //D_M
 					sv = sv + sv1;
 					sv = sv * __ldg(&mat[res_s + q * 32 + threadIdx.x]);
-					
+					//printf("t = %d q = %d: %f\n", threadIdx.x, q, xBt * __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x]));
+
 					xE = sv + xE;
-					//if (threadIdx.x == 3) printf("FWD # warp: %d ## thread: %d # xE = %f\n", threadIdx.y, threadIdx.x, xE);
+					if (threadIdx.x == 0) printf("FWD # warp: %d ## thread: %d # xE = %f\n", threadIdx.y, threadIdx.x,xE);
 
 					mmx = MMX[q];
 					imx = IMX[q];
@@ -132,7 +132,7 @@ int e_lm, int QV, double mu, double lambda)
 					sv1 = sv1 + imx * __ldg(&tran[q * 224 + 6 * 32 + threadIdx.x]); //I_I
 					IMX[q] = sv1; //INS[]?
 				}
-				
+				__syncthreads();
 				//For D_D path
 				reorder_float32(dcv); // ~vec_sld() 
 				DMX[0] = 0.0f;
@@ -164,45 +164,46 @@ int e_lm, int QV, double mu, double lambda)
 				
 				for (q = 0; q < Q; q++) xE = DMX[q] + xE;
 
-				//xE = xE + __shfl_xor(xE, 16);
-				//xE = xE + __shfl_xor(xE, 8);
-				//xE = xE + __shfl_xor(xE, 4);
+				xE = xE + __shfl_xor(xE, 16);
+				xE = xE + __shfl_xor(xE, 8);
+				xE = xE + __shfl_xor(xE, 4);
 				xE = xE + __shfl_xor(xE, 2);
 				xE = xE + __shfl_xor(xE, 1);
 				
 				__syncthreads();
 
-				if (threadIdx.x == 0)
+				if (xE > 1.0e4)
 				{
-					xN = xN * NCJ_MOVE; //?
-					xC = xE * e_lm + xC * NCJ_MOVE;
-					xJ = xE * e_lm + xJ * NCJ_MOVE;
-					xB = xJ * NCJ_MOVE + xN * NCJ_MOVE;
-
-					/*xC = xE + e_lm;
-					xJ = xE + e_lm;
-					xB = flogsum(xJ + NCJ_MOVE, xN + NCJ_MOVE);*/
-					
-					if (xE > 1.0e4)
+					if (threadIdx.x == 0)
 					{
+						xN = xN * NCJ_MOVE; //?
+						xC = xE * e_lm + xC * NCJ_MOVE;
+						xJ = xE * e_lm + xJ * NCJ_MOVE;
+						xB = xJ * NCJ_MOVE + xN * NCJ_MOVE;
+
+						/*xC = xE + e_lm;
+						xJ = xE + e_lm;
+						xB = flogsum(xJ + NCJ_MOVE, xN + NCJ_MOVE);*/
+
 						xN = xN / xE;
 						xC = xC / xE;
 						xJ = xJ / xE;
 						xB = xB / xE;
 						totscale = totscale + log(xE);
-						xE = 1.0 / xE;
-						
-						for (q = 0; q < Q; q++)
-						{
-							MMX[q] = MMX[q] * xE;
-							DMX[q] = DMX[q] * xE;
-							IMX[q] = IMX[q] * xE;
-						}
+						xEt = 1.0 / xE;
 
 						xE = 1.0;
 					}
-				}
+					else break;
 
+					for (q = 0; q < Q; q++)
+					{
+						MMX[q] = MMX[q] * xEt;
+						DMX[q] = DMX[q] * xEt;
+						IMX[q] = IMX[q] * xEt;
+					}
+				}
+				
 				__syncthreads();
 			}
 		}
