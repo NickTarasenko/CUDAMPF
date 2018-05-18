@@ -22,6 +22,7 @@ int e_lm, int QV, double mu, double lambda)
 	float NCJ_MOVE;
 	unsigned int LEN, OFF, res, res_s; //Mb use __shared__ ??
 	__shared__ float xE, xJ, xN, xC, xB, nullsv;
+	float xEv;
 	__shared__ float xEt;
 	int q, i, j, z, h ; //indexes
 	float totscale;
@@ -161,14 +162,14 @@ int e_lm, int QV, double mu, double lambda)
 
 				__syncthreads();
 
-				
-				for (q = 0; q < Q; q++) xE = DMX[q] + xE;
+				xEv = 0.0f;
+				for (q = 0; q < Q; q++) xvE = DMX[q] + xEv;
 
-				xE = xE + __shfl_xor(xE, 16);
-				xE = xE + __shfl_xor(xE, 8);
-				xE = xE + __shfl_xor(xE, 4);
-				xE = xE + __shfl_xor(xE, 2);
-				xE = xE + __shfl_xor(xE, 1);
+				xEv = xEv + __shfl_xor(xEv, 16);
+				xEv = xEv + __shfl_xor(xEv, 8);
+				xEv = xEv + __shfl_xor(xEv, 4);
+				xEv = xEv + __shfl_xor(xEv, 2);
+				xEv = xEv + __shfl_xor(xEv, 1);
 				
 				__syncthreads();
 
