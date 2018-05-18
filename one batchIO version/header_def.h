@@ -182,7 +182,7 @@ typedef struct hmmer_profile_s {
 	//__32float__ *fb_ins;									/* insert emisssion*/
 	__32float__ *fb_trans;									/* transition*/
 	
-	int E_lm_fb;										/* ONLY FOR H3: E node's loop and move: wordify(-eslCONST_LOG2) */
+	float E_lm_fb;										/* ONLY FOR H3: E node's loop and move: wordify(-eslCONST_LOG2) */
 	
 	/* ========================================================= */
 	/* Information about current configuration, size, allocation */
