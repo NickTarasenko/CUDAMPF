@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
 		
 		opt_Reg = 32;
 		GRID = dim3(1, 1/*24*/, 1);
-		BLOCK = dim3(WARP_SIZE, 1/*32*/, 1);
+		BLOCK = dim3(4, 1/*32*/, 1);
 		RTC_FWD(number, handle, hmm,
 				seq_1D, offset, seq_len,
 				iLen, sum, pValue,

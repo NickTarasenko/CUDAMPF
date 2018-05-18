@@ -83,6 +83,8 @@ double mu, double lambda)
 		for (i = 0; i < LEN; i += 32)
 		{
 			cache[threadIdx.y][threadIdx.x] = seq[OFF + i + threadIdx.x];
+			if (threadIdx.x == 0) printf("%f\n", __ldg(&tran[0]));
+
 			for (j = 0; j < 32; j++)
 			{
 				res = cache[threadIdx.y][j];	

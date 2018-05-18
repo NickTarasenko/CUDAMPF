@@ -213,7 +213,7 @@ static __device__ unsigned int reorder_float32 (unsigned int a)
 		".reg .u32		r							\n\t"
 		".reg .pred		p 							\n\t"
 		"mov.b32		r, %1						\n\t"
-		"shfl.idx.b32	r, r, %laneid + 31, 0x1f	\n\t"
+		"shfl.idx.b32	r, r, %laneid + 3, 0x4	\n\t"
 		"setp.eq.u32	p, %laneid + 0, 0			\n\t"
 		"@p   mov.u32 	r, 0x00000000				\n\t"
 		"}"

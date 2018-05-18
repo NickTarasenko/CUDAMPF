@@ -46,6 +46,8 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	checkCudaErrors(cuMemAlloc(&trans, hmm->fbQ * TRANS_TYPE * sizeof(__32float__)));		/* striped transition score */
 	checkCudaErrors(cuMemAlloc(&score, number * sizeof(double)));								/* P-Value as output */
 
+	//printf("#### hmm->fb_trans[3][1] = %f ####\n", hmm->fb_trans[3][1]);
+
 	/* H to D copy */
 	checkCudaErrors(cuMemcpyHtoD(d_seq, seq_1D, sum * sizeof(unsigned int)));
 	checkCudaErrors(cuMemcpyHtoD(d_offset, offset, number * sizeof(unsigned int)));
@@ -165,6 +167,8 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	/**************************************/
     sdkCreateTimer(&timer);
     sdkStartTimer(&timer);
+
+    
     
     cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1);
    /* parameters for kernel funciton */
@@ -172,7 +176,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 					&score, &d_len, &d_len_6r, &mat_v, &trans, 
 					&(hmm->E_lm_fb), &(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
 
-					printf("#$#$#$# MU = %f  LAMBDA = %f #$#$#$#", hmm->MU[1], hmm->LAMBDA[1]);
+					//printf("#$#$#$# MU = %f  LAMBDA = %f #$#$#$#", hmm->MU[1], hmm->LAMBDA[1]);
 
 	/* launch kernel */
         checkCudaErrors(cuLaunchKernel(	kernel,
@@ -185,7 +189,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	/* wait for kernel finish */
 	checkCudaErrors(cuCtxSynchronize());			/* block for a context's task to complete */
 
-    printf("Oups..\n");
+    //printf("Oups..\n");
 
 	sdkStopTimer(&timer);
     printf("Kernel time: %f (ms)\n", sdkGetTimerValue(&timer));
@@ -203,7 +207,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     printf("D to H copy time: %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);
 
-    printf("#### FWD = %f ####", pVal[0]);
+    printf("#### FWD = %f ####\n", pVal[0]);
 
     /* count the number of seqs pass */
 	unsigned long pass_vit = 0;			/* # of seqs pass vit */

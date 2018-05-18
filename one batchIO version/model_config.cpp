@@ -453,10 +453,11 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 	{
 		for (q = 0, j = 1; q < hmm->fbQ; q++, j++)
 		{
-			for (l = 0; l < 32; l++)
+			for (l = 0; l < 4; l++)
 			{
 				//hmm->fb_ins[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? ins_32bits[j + z * hmm->fbQ][i] : FLT_MAX);
-				hmm->fb_mat[i * hmm->fbQ + q][l] = ((j + z * hmm->fbQ <= hmm->M) ? hmm->mat_32bits[j + z * hmm->fbQ][i] : -INFINITY);
+				hmm->fb_mat[i * hmm->fbQ + q][l] = ((j + l * hmm->fbQ <= hmm->M) ? expf(hmm->mat_32bits[j + l * hmm->fbQ][i]) : -INFINITY);
+				//printf("protein_type = %d q = %d l = %d: val = %f\n", i, q, l, hmm->fb_mat[i * hmm->fbQ + q][l]);
 			}
 		}
 	}
@@ -478,9 +479,10 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 			case I_I: kb = k; break;
 			}
 
-			for (l = 0; l < 32; l++)
+			for (l = 0; l < 4; l++)
 			{
-				val = ((kb + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[kb + z * hmm->fbQ][t] : -INFINITY);
+				val = ((kb + l * hmm->fbQ < hmm->M) ? hmm->tran_32bits[kb + l * hmm->fbQ][t] : -INFINITY);
+				//printf("q = %d l = %d: val = %f\n", q, l, val);
 				hmm->fb_trans[q * 7 + t][l] = val;	// 7 is hard-coded since we have BM,MM,IM,DM,MD,MI,II in this loop...
 			}
 		}
@@ -490,11 +492,11 @@ int fbf_conversion(HMMER_PROFILE* hmm)
 	/* Finally the DD's, which are at the end of the optimized tsc vector; (j is already sitting there) */
 	for (k = 1, q = 0; q < hmm->fbQ; q++, k++)				// k = 0 is only for our case
 	{
-		for (l = 0; l < 32; l++)
-			hmm->fb_trans[7 * hmm->fbQ + q][l] = ((k + z * hmm->fbQ < hmm->M) ? hmm->log_tran_32bits[k + z * hmm->fbQ][D_D] : INFINITY);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
+		for (l = 0; l < 4; l++)
+			hmm->fb_trans[7 * hmm->fbQ + q][l] = ((k + l * hmm->fbQ < hmm->M) ? hmm->tran_32bits[k + l * hmm->fbQ][D_D] : INFINITY);		// since all others are done, DDs are placed at last, #8. so indexing it by "q"..
 	}
 	
-	hmm->E_lm_fb = hmm->Xtran_32bits[E * XTRANS_TYPE + LOOP];		/* E_LOOP,MOVE same */
+	hmm->E_lm_fb = expf(hmm->Xtran_32bits[E * XTRANS_TYPE + LOOP]);		/* E_LOOP,MOVE same */
 	//printf("Finish fbf_conversion...\n");
 	return fileOK;
 }
