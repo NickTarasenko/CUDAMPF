@@ -1,4 +1,8 @@
-#include <stdio>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <cuda.h>
+#include <helper_functions.h>
 
 int main(int argc, char* argv[])
 {

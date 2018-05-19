@@ -289,7 +289,7 @@ int main(int argc, char* argv[])
     } else if (!strcmp(argv[1], "-fwd")) {
 		printf("========== FWD Filter ==========\n");
 		
-		handle = read_kernel("RAW_FWD.cuh");
+		handle = read_kernel("LMEM_FWD.cuh");
 		
 		opt_Reg = 64;
 		GRID = dim3(1, 1/*24*/, 1);
