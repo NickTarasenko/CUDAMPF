@@ -3,7 +3,7 @@
 
 extern "C" __global__ 
 void KERNEL(unsigned int* seq, unsigned int total, unsigned int* offset,
-double* sc, int* L,  unsigned int* L_6r, float* mat, float* tran,
+double* sc, int* L,  unsigned int* L_6r, float* mat, float* tran, float* scales,
 int e_lm, int QV, double mu, double lambda)									
 {
 	volatile __shared__ unsigned int cache[RIB][32]; //Temp var for element of sequence
@@ -18,9 +18,14 @@ int e_lm, int QV, double mu, double lambda)
 	float NJC_MOVE, NJC_LOOP, sv;
 
 	float    xN, xE, xB, xC, xJ;
-	volatile __shared__ float xEv, xBv, totscale;
+	volatile __shared__ float xEv[RIB], xBv[RIB], totscale[RIB];
 
 	int i, q, j, z, h; //indexes
+
+
+
+
+	//while (seqIdx + idx) < total)
 
 	for (q = 0; q < Q; q++)
 	{
@@ -34,12 +39,11 @@ int e_lm, int QV, double mu, double lambda)
 	xE = 0.0f;
 	xN = 1.0f;
 	xJ = 0.0f;
-	xB = NJC_MOVE;
+	xBv[seqIdx] = NJC_MOVE;
 	xC = 0.0f;
 
-	totscale = 0.0f;
+	totscale[seqIdx] = 0.0f;
 
-	//while (seqIdx + idx > total)
 	LEN = L_6r[seqIdx];
 	OFF = offset[seqIdx];
 
@@ -60,7 +64,7 @@ int e_lm, int QV, double mu, double lambda)
 				res_s *= 32 * Q;
 
 				dcv = 0.0f;
-				xB = xBv;
+				xB = xBv[seqIdx];
 				xE = 0.0f;
 
 				mmx = MMX[Q - 1];
@@ -148,13 +152,13 @@ int e_lm, int QV, double mu, double lambda)
 					xN = xN * NJC_LOOP;
 					xC = xC * NJC_LOOP + xE * 0.5;
 					xJ = xJ * NJC_LOOP + xE * 0.5;
-					xBv = xJ * NJC_MOVE + xN * NJC_MOVE;
+					xBv[seqIdx] = xJ * NJC_MOVE + xN * NJC_MOVE;
 
 					/*xC = xE * e_lm;
 					xJ = xE * e_lm;
 					xB = xJ * NJC_MOVE + xN * NJC_MOVE;*/
 
-					xEv = xE;
+					xEv[seqIdx] = xE;
 				}
 
 				__syncthreads();
@@ -162,19 +166,19 @@ int e_lm, int QV, double mu, double lambda)
 				//if (threadIdx.x == 0 && i+j+z<10)printf("threadIdx = %d # i = %d # xE = %f xN = %f xC = %f xJ = %f xBv = %f\n", threadIdx.x, i+j+z, xE, xN, xC, xJ, xBv);
 				//if (threadIdx.x == 0 && i+j+z<10)printf("threadIdx = %d # i = %d # xBv = %f \n", threadIdx.x, i+j+z, xBv);
 
-				if (xEv > 1.0e4)
+				if (xEv[seqIdx] > 1.0e4)
 				{
 					if (threadIdx.x == 0)
 					{
 						xN = xN / xE;
 						xC = xC / xE;
 						xJ = xJ / xE;
-						xBv = xBv / xE;
+						xBv[seqIdx] = xBv[seqIdx] / xE;
 					}
 
 					__syncthreads();
 
-					xE = 1.0f / xEv;
+					xE = 1.0f / xEv[seqIdx];
 					for (q = 0; q < Q; q++)
 					{
 						MMX[q] = MMX[q] * xE;
@@ -182,16 +186,20 @@ int e_lm, int QV, double mu, double lambda)
 						DMX[q] = DMX[q] * xE;
 					}
 
-					totscale += log(xEv);
-					xEv = 1.0f;
+					scales[i] = xEv[seqIdx];
+					totscale[seqIdx] += logf(xEv[seqIdx]);
+					xEv[seqIdx] = 1.0f;
 				}
+				else scales[i] = 1.0;
 
 				__syncthreads();
 			}
 		}
 	}
 
-	if (threadIdx.x == 0) sc[seqIdx] = totscale + log(xC) + log(NJC_MOVE);
+	if (threadIdx.x == 0) sc[seqIdx] = totscale[seqIdx]+ logf(xC) + logf(NJC_MOVE);
+
+	//end while
 }
 
 #endif /* _LOCALMEMORY_KERNEL_FWD_ */

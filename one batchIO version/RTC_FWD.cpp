@@ -34,7 +34,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     sdkStartTimer(&timer);
 
    	/* Driver API pointers */
-	CUdeviceptr d_seq, d_offset, d_len, d_len_6r, mat_v, trans, score;
+	CUdeviceptr d_seq, d_offset, d_len, d_len_6r, mat_v, trans, score, scale;
 
 	/* Allocation */
 	checkCudaErrors(cuMemAlloc(&d_seq, sum * sizeof(unsigned int)));							/* copy 1D database */
@@ -45,6 +45,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	//checkCudaErrors(cuMemAlloc(&ins_v, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));		/* striped EMISSION insert score */
 	checkCudaErrors(cuMemAlloc(&trans, hmm->fbQ * TRANS_TYPE * sizeof(__32float__)));		/* striped transition score */
 	checkCudaErrors(cuMemAlloc(&score, number * sizeof(double)));								/* P-Value as output */
+	checkCudaErrors(cuMemAlloc(&scale, number * sizeof(double)));
 
 	//printf("#### hmm->fb_trans[3][1] = %f ####\n", hmm->fb_trans[3][1]);
 
@@ -175,7 +176,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1);
    /* parameters for kernel funciton */
 	void *arr[] = { &d_seq, &number, &d_offset,
-					&score, &d_len, &d_len_6r, &mat_v, &trans, 
+					&score, &d_len, &d_len_6r, &mat_v, &trans, &scale,
 					&(hmm->E_lm_fb), &(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
 
 					//printf("#$#$#$# MU = %f  LAMBDA = %f #$#$#$#", hmm->MU[1], hmm->LAMBDA[1]);
