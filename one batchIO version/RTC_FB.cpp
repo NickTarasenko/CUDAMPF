@@ -5,7 +5,7 @@
 #include "header_def.h"
 #include "nvrtc_options.h"		// include <string>
 
-void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
+void RTC_FB(unsigned int number, const char* GPU_kernel1, const char* GPU_kernel2, HMMER_PROFILE *hmm,
 	     unsigned int *seq_1D, unsigned int *offset, unsigned int *seq_len,
 	     unsigned int *iLen, unsigned int sum, double *pVal,
 	     int warp, int maxreg, dim3 GRID, dim3 BLOCK)
@@ -16,7 +16,8 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	CUdevice cuDevice;
 	CUcontext context;
 	CUmodule module;
-	CUfunction kernel;
+	CUfunction kernel1;
+	CUfunction kernel2;
 
 	checkCudaErrors(cuInit(0));
 	checkCudaErrors(cuDeviceGet(&cuDevice, 0));
@@ -34,17 +35,18 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     sdkStartTimer(&timer);
 
    	/* Driver API pointers */
-	CUdeviceptr d_seq, d_offset, d_len, d_len_6r, mat_v, trans, score, scale;
+	CUdeviceptr d_seq, d_offset, d_len, d_len_6r, mat_v, trans, scoreF, scoreB, scale;
 
 	/* Allocation */
 	checkCudaErrors(cuMemAlloc(&d_seq, sum * sizeof(unsigned int)));							/* copy 1D database */
 	checkCudaErrors(cuMemAlloc(&d_offset, number * sizeof(unsigned int)));						/* copy offset of each seq*/
 	checkCudaErrors(cuMemAlloc(&d_len, number * sizeof(unsigned int)));							/* copy raw length of each seq */
 	checkCudaErrors(cuMemAlloc(&d_len_6r, number * sizeof(unsigned int)));						/* copy padding length of each seq */
-	checkCudaErrors(cuMemAlloc(&mat_v, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));		/* striped EMISSION match score */
-	//checkCudaErrors(cuMemAlloc(&ins_v, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));		/* striped EMISSION insert score */
-	checkCudaErrors(cuMemAlloc(&trans, hmm->fbQ * TRANS_TYPE * sizeof(__32float__)));		/* striped transition score */
-	checkCudaErrors(cuMemAlloc(&score, number * sizeof(double)));								/* P-Value as output */
+	checkCudaErrors(cuMemAlloc(&mat_v, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));		/* striped EMISSION match scoreF */
+	//checkCudaErrors(cuMemAlloc(&ins_v, hmm->fbQ * PROTEIN_TYPE * sizeof(__32float__)));		/* striped EMISSION insert scoreF */
+	checkCudaErrors(cuMemAlloc(&trans, hmm->fbQ * TRANS_TYPE * sizeof(__32float__)));		/* striped transition scoreF */
+	checkCudaErrors(cuMemAlloc(&scoreF, number * sizeof(double)));								/* P-Value FWD as output */
+	checkCudaErrors(cuMemAlloc(&scoreB, number * sizeof(double)));							/* P-Value BWD as output */
 	checkCudaErrors(cuMemAlloc(&scale, number * sizeof(double)));
 
 	//printf("#### hmm->fb_trans[3][1] = %f ####\n", hmm->fb_trans[3][1]);
@@ -70,8 +72,18 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     printf("--- NVRTC create handle...\n");
 	/* NVRTC create handle */
 	nvrtcProgram prog;
+	nvrtcProgram prog1;
+	nvrtcProgram prog2;
+
 	NVRTC_SAFE_CALL("nvrtcCreateProgram", nvrtcCreateProgram(&prog,			// prog
-								 GPU_kernel,		// buffer
+								 GPU_kernel1,		// buffer
+								 NULL,			// name: CUDA program name. name can be NULL; “default_program” is used when it is NULL.
+								 0,			// numHeaders (I put header file path with -I later)
+								 NULL,			// headers' content
+								 NULL));		// include full name of headers
+
+	NVRTC_SAFE_CALL("nvrtcCreateProgram", nvrtcCreateProgram(&prog2,			// prog2
+								 GPU_kernel2,		// buffer
 								 NULL,			// name: CUDA program name. name can be NULL; “default_program” is used when it is NULL.
 								 0,			// numHeaders (I put header file path with -I later)
 								 NULL,			// headers' content
@@ -123,10 +135,21 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     char** &test_ref = const_cast<char** &>(opts);
     test_ref = test_char;
     printf("--- NVRTC compile...\n");
+    printf("--- Compile FWD...\n");
     /* NVRTC compile */
 	NVRTC_SAFE_CALL("nvrtcCompileProgram", nvrtcCompileProgram(prog,	// prog
 															   8,		// numOptions
 															   opts));	// options
+
+	prog1 = prog; prog = NULL;
+
+	printf("--- Compile BWD...\n");
+
+	NVRTC_SAFE_CALL("nvrtcCompileProgram", nvrtcCompileProgram(prog,	// prog
+															   8,		// numOptions
+															   opts));	// options
+
+	prog2 = prog; prog = NULL;
 
 	sdkStopTimer(&timer);
     printf("nvrtc Creat and Compile: %f (ms)\n", sdkGetTimerValue(&timer));
@@ -152,6 +175,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	size_t ptxsize;
 	NVRTC_SAFE_CALL("nvrtcGetPTXSize", nvrtcGetPTXSize(prog, &ptxsize));
 	char *ptx = new char[ptxsize];
+	prog = prog1;
 	NVRTC_SAFE_CALL("nvrtcGetPTX", nvrtcGetPTX(prog, ptx));
 	NVRTC_SAFE_CALL("nvrtcDestroyProgram", nvrtcDestroyProgram(&prog));	// destroy program instance
 
@@ -159,7 +183,22 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 
 	/* Launch PTX by driver API */
 	checkCudaErrors(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
-	checkCudaErrors(cuModuleGetFunction(&kernel, module, "KERNEL"));	// return the handle of function, name is the same as real kernel function
+	checkCudaErrors(cuModuleGetFunction(&kernel1, module, "KERNEL"));	// return the handle of function, name is the same as real kernel function
+
+	prog = prog2;
+
+	// For BWD
+	NVRTC_SAFE_CALL("nvrtcGetPTXSize", nvrtcGetPTXSize(prog, &ptxsize));
+	ptx = new char[ptxsize];
+	prog = prog2;
+	NVRTC_SAFE_CALL("nvrtcGetPTX", nvrtcGetPTX(prog, ptx));
+	NVRTC_SAFE_CALL("nvrtcDestroyProgram", nvrtcDestroyProgram(&prog));	// destroy program instance
+
+	//printf("Got ptx = %s\n", ptx);
+
+	/* Launch PTX by driver API */
+	checkCudaErrors(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
+	checkCudaErrors(cuModuleGetFunction(&kernel2, module, "KERNEL"));	// return the handle of function, name is the same as real kernel function
 
 	sdkStopTimer(&timer);
     printf("Compile & Load time: %f (ms)\n", sdkGetTimerValue(&timer));
@@ -175,18 +214,38 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     
     cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1);
    /* parameters for kernel funciton */
-	void *arr[] = { &d_seq, &number, &d_offset,
-					&score, &d_len, &d_len_6r, &mat_v, &trans, &scale,
+	void *arr1[] = { &d_seq, &number, &d_offset,
+					&scoreF, &d_len, &d_len_6r, &mat_v, &trans, &scale,
 					&(hmm->E_lm_fb), &(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
 
 					//printf("#$#$#$# MU = %f  LAMBDA = %f #$#$#$#", hmm->MU[1], hmm->LAMBDA[1]);
 
 	/* launch kernel */
-        checkCudaErrors(cuLaunchKernel(	kernel,
+        checkCudaErrors(cuLaunchKernel(	kernel1,
 								  	GRID.x, GRID.y, GRID.z,		/* grid dim */
 									BLOCK.x, BLOCK.y, BLOCK.z,	/* block dim */
 									0,0,						/* SMEM, stream */
-									&arr[0],					/* kernel params */
+									&arr1[0],					/* kernel params */
+									0));						/* extra opts */
+
+	/* wait for kernel finish */
+	checkCudaErrors(cuCtxSynchronize());			/* block for a context's task to complete */
+
+
+    cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1);
+   /* parameters for kernel funciton */
+	void *arr2[] = { &d_seq, &number, &d_offset,
+					&scoreB, &d_len, &d_len_6r, &mat_v, &trans, &scale,
+					&(hmm->E_lm_fb), &(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
+
+					//printf("#$#$#$# MU = %f  LAMBDA = %f #$#$#$#", hmm->MU[1], hmm->LAMBDA[1]);
+
+	/* launch kernel */
+        checkCudaErrors(cuLaunchKernel(	kernel2,
+								  	GRID.x, GRID.y, GRID.z,		/* grid dim */
+									BLOCK.x, BLOCK.y, BLOCK.z,	/* block dim */
+									0,0,						/* SMEM, stream */
+									&arr2[0],					/* kernel params */
 									0));						/* extra opts */
 
 	/* wait for kernel finish */
@@ -204,13 +263,13 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     sdkCreateTimer(&timer);
     sdkStartTimer(&timer);
 
-    checkCudaErrors(cuMemcpyDtoH(pVal, score, number * sizeof(double)));
+    checkCudaErrors(cuMemcpyDtoH(pVal, scoreB, number * sizeof(double)));
 
    	sdkStopTimer(&timer);
     printf("D to H copy time: %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);
 
-    printf("#### FWD = %f ####\n", pVal[0]);
+    printf("#### BWD = %f ####\n", pVal[0]);
 
     /* count the number of seqs pass */
 	unsigned long pass_vit = 0;			/* # of seqs pass vit */

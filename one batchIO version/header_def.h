@@ -275,6 +275,10 @@ extern void RTC_FWD(unsigned int, const char*, HMMER_PROFILE*,
 	     unsigned int*, unsigned int*, unsigned int*,
 	     unsigned int*, unsigned int, double*,
 	     int, int, dim3, dim3);
+extern void RTC_FB(unsigned int, const char*, const char*, HMMER_PROFILE*,
+	     unsigned int*, unsigned int*, unsigned int*,
+	     unsigned int*, unsigned int, double*,
+	     int, int, dim3, dim3);
 
 
 #endif /*HMMER_DEFS*/

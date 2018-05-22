@@ -10,7 +10,7 @@ int e_lm, int QV, double mu, double lambda)
 	float MMX[Q];
 	float IMX[Q];
 	float DMX[Q];
-	float bscale;
+	//float bscale;
 
 	const int seqIdx = gridDim.y * blockIdx.y + threadIdx.y;
 
@@ -21,7 +21,7 @@ int e_lm, int QV, double mu, double lambda)
 	float NJC_MOVE, NJC_LOOP, sv;
 
 	float    xN, xE, xB, xC, xJ;
-	volatile __shared__ float xEv[seqIdx], xBv[seqIdx], totscale[seqIdx];
+	volatile __shared__ float xEv[RIB], xBv[RIB], totscale[RIB];
 
 	int i, q, j, z, h; //indexes
 
@@ -36,10 +36,10 @@ int e_lm, int QV, double mu, double lambda)
 	NJC_LOOP = 1.0f - NJC_MOVE;
 
 	xJ = 0.0f;
-	xBv[seqIdx] = 0.0f;
+	xBv[threadIdx.y] = 0.0f;
 	xN = 0.0f;
 	xC = NJC_MOVE;
-	xEv[seqIdx] = xC * e_lm;
+	xEv[threadIdx.y] = xC * e_lm;
 	xE = xEv;
 	dcv = 0;
 
@@ -82,11 +82,11 @@ int e_lm, int QV, double mu, double lambda)
 
 	if (fscale[seqIdx] > 1.0)
 	{
-		xEv[seqIdx] = xEv[seqIdx] / fscale[seqIdx];
+		xEv[threadIdx.y] = xEv[threadIdx.y] / fscale[seqIdx];
 		xN = xN / fscale[seqIdx];
 		xC = xC / fscale[seqIdx];
 		xJ = xJ / fscale[seqIdx];
-		xBv[seqIdx] = xBv[seqIdx] / fscale[seqIdx];
+		xBv[threadIdx.y] = xBv[threadIdx.y] / fscale[seqIdx];
 		xE = 1.0 / fscale[seqIdx];
 
 		for (q = 0; q < Q; q++)
@@ -96,8 +96,8 @@ int e_lm, int QV, double mu, double lambda)
 			IMX[q] = IMX[q] * xE;
 		}
 	}
-	bscale[L[seqIdx] - 1] = fscale[LEN - 1];
-	totscale[seqIdx] = logf(bscale[LEN - 1]);
+	//bscale[L[seqIdx] - 1] = fscale[seqIdx];
+	totscale[seqIdx] = logf(fscale[seqIdx]);
 
 	res_p = -1; //flag
 
@@ -105,7 +105,7 @@ int e_lm, int QV, double mu, double lambda)
 	{
 		cache[threadIdx.y][threadIdx.x] = seq[OFF + i + threadIdx.x];
 
-		for (j = 31; j <= 0; j++)
+		for (j = 31; j <= 0; j--)
 		{
 			res = cache[threadIdx.y][j];	
 			if ((res & 0x000000ff) == 31) break;
@@ -116,6 +116,8 @@ int e_lm, int QV, double mu, double lambda)
 				if (res_s == 31) break;
 
 				res_s *= Q * 32;
+
+				if (z + j + i == 0) break;
 
 				if (res_p == -1) {res_p = res_s; break;}
 
@@ -168,11 +170,12 @@ int e_lm, int QV, double mu, double lambda)
 					xC = xC * NJC_LOOP;
 					xJ = xJ * NJC_LOOP + xB * NJC_MOVE;
 					xN = xN * NJC_LOOP + xB * NJC_MOVE;
-					xEv[seqIdx] = xC * NJC_MOVE + xJ * NJC_LOOP;
+					xEv[threadIdx.y] = xC * NJC_MOVE + xJ * NJC_LOOP;
 
-					xBv[seqIdx] = xB;
+					xBv[threadIdx.y] = xB;
 				}
-				xE = xEv[seqIdx];
+				__syncthreads();
+				xE = xEv[threadIdx.y];
 
 				dcv = DMX[0] + xE;
 				dcv = __shfl_sync(0x1f, dcv, threadIdx.x - 1);
@@ -208,7 +211,30 @@ int e_lm, int QV, double mu, double lambda)
 					dcv = DMX[q];
 				}
 
-				
+				if (xBv[threadIdx.y] > 1.0e4)
+				{
+					if (threadIdx.x == 0)
+					{
+						xEv[threadIdx.y] /= xBv[threadIdx.y];
+						xN /= xBv[threadIdx.y];
+						xJ /= xBv[threadIdx.y];
+						xC /= xBv[threadIdx.y];
+					}
+
+					__syncthreads();
+
+					xB = 1.0f / xBv[threadIdx.y];
+
+					for (q = 0; q < Q; q++)
+					{
+						MMX[q] *= xB;
+						IMX[q] *= xB;
+						DMX[q] *= xB;
+					}
+
+					totscalep[threadIdx.y] += logf(xBv[threadIdx.y]);
+					xBv[threadIdx.y] = 1.0f;
+				}
 
 				res_p = res_s;
 			}
@@ -216,6 +242,27 @@ int e_lm, int QV, double mu, double lambda)
 
 	}
 
+	xB = 0;
+	for (q = 0; q < Q; q++)
+	{
+		mmx = MMX[q] * __ldg(&mat[res_s + threadIdx.x]);
+		xB += mmx * __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x])
+	}
+
+	xB = xB + __shfl_down_sync(0x1F, xB, 16);
+	xB = xB + __shfl_down_sync(0x1F, xB, 8);
+	xB = xB + __shfl_down_sync(0x1F, xB, 4);
+	xB = xB + __shfl_down_sync(0x1F, xB, 2);
+	xB = xB + __shfl_down_sync(0x1F, xB, 1);
+
+	if (threadIdx.x == 0) 
+	{
+		xN = xB * NJC_MOVE + xN * NJC_LOOP;
+
+		sc[seqIdx] = totscale + log(xN);
+	}
+
+	__syncthreads();
 
 	//end while
 }

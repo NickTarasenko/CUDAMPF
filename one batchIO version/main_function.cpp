@@ -10,9 +10,10 @@ int main(int argc, char* argv[])
 {
 	/* Input Parameters */
 	printf("Your input is: %s\n", argv[1]);
-	if(strcmp(argv[1],"-msv") && strcmp(argv[1],"-ssv") && strcmp(argv[1],"-vit") && strcmp(argv[1],"-fwd"))
+	if(strcmp(argv[1],"-msv") && strcmp(argv[1],"-ssv") && strcmp(argv[1],"-vit") 
+		&& strcmp(argv[1],"-fwd") && strcmp(argv[1],"-fb"))
 	{
-        std::cerr << "\nerror input options: " << argv[1] << "! must be -ssv -msv -vit -fwd!\n";
+        std::cerr << "\nerror input options: " << argv[1] << "! must be -ssv -msv -vit -fwd -fb!\n";
         exit(1);
 	}
 	char *seqdb_filename;
@@ -169,7 +170,8 @@ int main(int argc, char* argv[])
 	printf("SMX = %d\n", SMX);
 	printf("MAX_SMEM = %d\n", MAX_SMEM);
 
-    char* handle = NULL;	/* pointer to kernel file */
+    char* handle1 = NULL;	/* main pointer to kernel file */
+    char* handle2 = NULL;	/* sub pointer to kernel file for fb filter */
     RIB_BLOCK rb;			/* get optimal RIB for SMEM */
 	int opt_Reg = 0;		/* get maximum available regs for each threads based on resident registers per SMX on current context */
 
@@ -192,7 +194,7 @@ int main(int argc, char* argv[])
 			printf("SMEM SSV::warps per block: %d\n", rb.warps);
 			printf("SMEM SSV::resident blocks per SMX: %d\n", rb.res_blocks);
 
-			handle = read_kernel("SMEM_SSV.cuh");	/* read SMEM */
+			handle1 = read_kernel("SMEM_SSV.cuh");	/* read SMEM */
 			printf("Using SMEM: load in \"SMEM_SSV.cuh\" kernel file...\n");
 
 			/* 65536 is hard-coded (need change to device property) */
@@ -202,12 +204,12 @@ int main(int argc, char* argv[])
 			GRID = dim3(1, rb.res_blocks * SMX, 1);
   			BLOCK = dim3(WARP_SIZE, rb.warps, 1);		/* RIB & Resident blocks always change depending size of model for optimal */
 
-			RTC_SSV(number, handle, hmm,
+			RTC_SSV(number, handle1, hmm,
 				    seq_1D, offset, seq_len,
 				    iLen, sum, pValue,
 				    rb.warps, opt_Reg, GRID, BLOCK);	/* optimal warps per block; 32 reg per thread (based on test); */	
 		} else {
-			handle = read_kernel("LMEM_SSV.cuh");		/* read LMEM */
+			handle1 = read_kernel("LMEM_SSV.cuh");		/* read LMEM */
 			printf("Using LMEM: load in \"LMEM_SSV.cuh\" kernel file...\n");
 
 			opt_Reg = 64;
@@ -217,7 +219,7 @@ int main(int argc, char* argv[])
 			  defect_RIB = 32;
 			GRID = dim3(1, SMX, 1);
 			BLOCK = dim3(WARP_SIZE, defect_RIB, 1);		/* [FIXED] one block per SMX, 1024 threads per block */
-			RTC_SSV(number, handle, hmm,
+			RTC_SSV(number, handle1, hmm,
 				    seq_1D, offset, seq_len,
 				    iLen, sum, pValue,
 				    defect_RIB, opt_Reg, GRID, BLOCK);	/* 32 warps per block; 64 reg per thread; */
@@ -230,7 +232,7 @@ int main(int argc, char* argv[])
 			printf("SMEM MSV::warps per block: %d\n", rb.warps);
 			printf("SMEM MSV::resident blocks per SMX: %d\n", rb.res_blocks);
 
-			handle = read_kernel("SMEM_MSV.cuh");
+			handle1 = read_kernel("SMEM_MSV.cuh");
 			printf("Using SMEM: load in \"SMEM_MSV.cuh\" kernel file...\n");
 
 			opt_Reg = (65536/(WARP_SIZE * rb.warps * rb.res_blocks) > 255) ? 255 : (65536/(WARP_SIZE * rb.warps * rb.res_blocks));
@@ -238,18 +240,18 @@ int main(int argc, char* argv[])
 
 			GRID = dim3(1, rb.res_blocks * SMX, 1);
 			BLOCK = dim3(WARP_SIZE, rb.warps, 1);
-			RTC_MSV(number, handle, hmm,
+			RTC_MSV(number, handle1, hmm,
 				seq_1D, offset, seq_len,
 				iLen, sum, pValue,
 				rb.warps, opt_Reg, GRID, BLOCK);
 		} else {
-			handle = read_kernel("LMEM_MSV.cuh");
+			handle1 = read_kernel("LMEM_MSV.cuh");
 			printf("Using LMEM: load in \"LMEM_MSV.cuh\" kernel file...\n");
 
 			opt_Reg = 64;
 			GRID = dim3(1, SMX, 1);
 			BLOCK = dim3(WARP_SIZE, 32, 1);
-			RTC_MSV(number, handle, hmm,
+			RTC_MSV(number, handle1, hmm,
 				seq_1D, offset, seq_len,
 				iLen, sum, pValue,
 				32, opt_Reg, GRID, BLOCK);
@@ -262,7 +264,7 @@ int main(int argc, char* argv[])
 			printf("SMEM VIT::warps per block: %d\n", rb.warps);
 			printf("SMEM VIT::resident blocks per SMX: %d\n", rb.res_blocks);
 
-			handle = read_kernel("SMEM_VIT.cuh");
+			handle1 = read_kernel("SMEM_VIT.cuh");
 			printf("Using SMEM: load in \"SMEM_VIT.cuh\" kernel file...\n");
 
 			opt_Reg = (65536/(WARP_SIZE * rb.warps * rb.res_blocks) > 255) ? 255 : (65536/(WARP_SIZE * rb.warps * rb.res_blocks));
@@ -270,18 +272,18 @@ int main(int argc, char* argv[])
 
 			GRID = dim3(1, rb.res_blocks * SMX, 1);
   			BLOCK = dim3(WARP_SIZE, rb.warps, 1);
-			RTC_VIT(number, handle, hmm,
+			RTC_VIT(number, handle1, hmm,
 				seq_1D, offset, seq_len,
 				iLen, sum, pValue,
 				rb.warps, opt_Reg, GRID, BLOCK);
 		} else {
-			handle = read_kernel("LMEM_VIT.cuh");
+			handle1 = read_kernel("LMEM_VIT.cuh");
 			printf("Using LMEM: load in \"LMEM_VIT.cuh\" kernel file...\n");
 
 			opt_Reg = 64;
 			GRID = dim3(1, SMX, 1);
 			BLOCK = dim3(WARP_SIZE, 32, 1);
-			RTC_VIT(number, handle, hmm,
+			RTC_VIT(number, handle1, hmm,
 				seq_1D, offset, seq_len,
 				iLen, sum, pValue,
 				32, opt_Reg, GRID, BLOCK);
@@ -289,12 +291,27 @@ int main(int argc, char* argv[])
     } else if (!strcmp(argv[1], "-fwd")) {
 		printf("========== FWD Filter ==========\n");
 		
-		handle = read_kernel("LMEM_FWD.cuh");
+		handle1 = read_kernel("LMEM_FWD.cuh");
 		
 		opt_Reg = 64;
 		GRID = dim3(1, 1/*24*/, 1);
 		BLOCK = dim3(WARP_SIZE, 1/*32*/, 1);
-		RTC_FWD(number, handle, hmm,
+		RTC_FWD(number, handle1, hmm,
+				seq_1D, offset, seq_len,
+				iLen, sum, pValue,
+				32, opt_Reg, GRID, BLOCK);
+	}
+	else if (!strcmp(argv[1], "-fb"))
+	{
+		printf("========== FB Filter ==========\n");
+		
+		handle1 = read_kernel("LMEM_FWD.cuh");
+		handle2 = read_kernel("RAW_BWD.cuh");
+		
+		opt_Reg = 64;
+		GRID = dim3(1, 1/*24*/, 1);
+		BLOCK = dim3(WARP_SIZE, 1/*32*/, 1);
+		RTC_FB(number, handle1, handle2, hmm,
 				seq_1D, offset, seq_len,
 				iLen, sum, pValue,
 				32, opt_Reg, GRID, BLOCK);

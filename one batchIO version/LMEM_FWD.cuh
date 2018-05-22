@@ -39,10 +39,10 @@ int e_lm, int QV, double mu, double lambda)
 	xE = 0.0f;
 	xN = 1.0f;
 	xJ = 0.0f;
-	xBv[seqIdx] = NJC_MOVE;
+	xBv[threadIdx.y] = NJC_MOVE;
 	xC = 0.0f;
 
-	totscale[seqIdx] = 0.0f;
+	totscale[threadIdx.y] = 0.0f;
 
 	LEN = L_6r[seqIdx];
 	OFF = offset[seqIdx];
@@ -64,7 +64,7 @@ int e_lm, int QV, double mu, double lambda)
 				res_s *= 32 * Q;
 
 				dcv = 0.0f;
-				xB = xBv[seqIdx];
+				xB = xBv[threadIdx.y];
 				xE = 0.0f;
 
 				mmx = MMX[Q - 1];
@@ -152,13 +152,13 @@ int e_lm, int QV, double mu, double lambda)
 					xN = xN * NJC_LOOP;
 					xC = xC * NJC_LOOP + xE * 0.5;
 					xJ = xJ * NJC_LOOP + xE * 0.5;
-					xBv[seqIdx] = xJ * NJC_MOVE + xN * NJC_MOVE;
+					xBv[threadIdx.y] = xJ * NJC_MOVE + xN * NJC_MOVE;
 
 					/*xC = xE * e_lm;
 					xJ = xE * e_lm;
 					xB = xJ * NJC_MOVE + xN * NJC_MOVE;*/
 
-					xEv[seqIdx] = xE;
+					xEv[threadIdx.y] = xE;
 				}
 
 				__syncthreads();
@@ -166,19 +166,19 @@ int e_lm, int QV, double mu, double lambda)
 				//if (threadIdx.x == 0 && i+j+z<10)printf("threadIdx = %d # i = %d # xE = %f xN = %f xC = %f xJ = %f xBv = %f\n", threadIdx.x, i+j+z, xE, xN, xC, xJ, xBv);
 				//if (threadIdx.x == 0 && i+j+z<10)printf("threadIdx = %d # i = %d # xBv = %f \n", threadIdx.x, i+j+z, xBv);
 
-				if (xEv[seqIdx] > 1.0e4)
+				if (xEv[threadIdx.y] > 1.0e4)
 				{
 					if (threadIdx.x == 0)
 					{
 						xN = xN / xE;
 						xC = xC / xE;
 						xJ = xJ / xE;
-						xBv[seqIdx] = xBv[seqIdx] / xE;
+						xBv[threadIdx.y] = xBv[threadIdx.y] / xE;
 					}
 
 					__syncthreads();
 
-					xE = 1.0f / xEv[seqIdx];
+					xE = 1.0f / xEv[threadIdx.y];
 					for (q = 0; q < Q; q++)
 					{
 						MMX[q] = MMX[q] * xE;
@@ -186,9 +186,9 @@ int e_lm, int QV, double mu, double lambda)
 						DMX[q] = DMX[q] * xE;
 					}
 
-					scales[i] = xEv[seqIdx];
-					totscale[seqIdx] += logf(xEv[seqIdx]);
-					xEv[seqIdx] = 1.0f;
+					scales[i] = xEv[threadIdx.y];
+					totscale[threadIdx.y] += logf(xEv[threadIdx.y]);
+					xEv[threadIdx.y] = 1.0f;
 				}
 				else scales[i] = 1.0;
 
@@ -197,7 +197,7 @@ int e_lm, int QV, double mu, double lambda)
 		}
 	}
 
-	if (threadIdx.x == 0) sc[seqIdx] = totscale[seqIdx]+ logf(xC) + logf(NJC_MOVE);
+	if (threadIdx.x == 0) sc[threadIdx.y] = totscale[threadIdx.y]+ logf(xC) + logf(NJC_MOVE);
 
 	//end while
 }
