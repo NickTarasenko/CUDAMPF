@@ -1,9 +1,10 @@
+
 #ifndef _LOCALMEMORY_KERNEL_BWD_
 #define _LOCALMEMORY_KERNEL_BWD_
 
 extern "C" __global__ 
 void KERNEL(unsigned int* seq, unsigned int total, unsigned int* offset,
-double* sc, int* L,  unsigned int* L_6r, float* mat, float* tran, float* fscale
+double* sc, int* L,  unsigned int* L_6r, float* mat, float* tran, float* fscale,
 int e_lm, int QV, double mu, double lambda)	
 {
 	volatile __shared__ unsigned int cache[RIB][32]; //Temp var for element of sequence
@@ -29,7 +30,7 @@ int e_lm, int QV, double mu, double lambda)
 
 	//while (seqIdx + idx) < total)
 
-	LEN = L[seqIdx];
+	LEN = L_6r[seqIdx];
 	OFF = offset[seqIdx];
 
 	NJC_MOVE = (float)3.0f / (float)(L[seqIdx] + 3.0f);
@@ -39,8 +40,8 @@ int e_lm, int QV, double mu, double lambda)
 	xBv[threadIdx.y] = 0.0f;
 	xN = 0.0f;
 	xC = NJC_MOVE;
-	xEv[threadIdx.y] = xC * e_lm;
-	xE = xEv;
+	xEv[threadIdx.y] = xC * 0.5f; //e_lm must be 0.5
+	xE = xEv[threadIdx.y];
 	dcv = 0;
 
 	for (q = 0; q < Q; q++) 
@@ -52,6 +53,7 @@ int e_lm, int QV, double mu, double lambda)
 	//D_D
 	dcv = __shfl_sync(0x1f, DMX[Q - 1], threadIdx.x - 1);
 	if (threadIdx.x == 31) dcv = 0.0f;
+
 	for (q = Q - 1; q > 0; q--)
 	{
 		DMX[q] += dcv * __ldg(&tran[q * 224 + 7 * 32 + threadIdx.x]);
@@ -60,7 +62,7 @@ int e_lm, int QV, double mu, double lambda)
 	dcv = dcv * __ldg(&tran[q * 224 + 7 * 32 + threadIdx.x]);
 	DMX[q] = DMX[q] + dcv;
 
-	for (j = 0; j < 4; j++)
+	for (j = 1; j < 4; j++)
 	{
 		dcv = __shfl_sync(0x1f, DMX[Q - 1], threadIdx.x - 1);
 		if (threadIdx.x == 31) dcv = 0.0f;
@@ -99,7 +101,7 @@ int e_lm, int QV, double mu, double lambda)
 	//bscale[L[seqIdx] - 1] = fscale[seqIdx];
 	totscale[seqIdx] = logf(fscale[seqIdx]);
 
-	res_p = -1; //flag
+	res_p = 31; //flag
 
 	for (i = LEN - 33; i >= 0; i -= 32)
 	{
@@ -119,19 +121,21 @@ int e_lm, int QV, double mu, double lambda)
 
 				if (z + j + i == 0) break;
 
-				if (res_p == -1) {res_p = res_s; break;}
+				if (res_p == 31) {res_p = res_s; break;}
 
 				tmmx = __ldg(&tran[1 * 32 + threadIdx.x]); // M_M
 				tmmx = __shfl_sync(0x1f, tmmx, threadIdx.x - 1);
 				if (threadIdx.x == 31) tmmx = 0.0f;
+
 				timx = __ldg(&tran[2 * 32 + threadIdx.x]); //I_M
 				timx = __shfl_sync(0x1f, timx, threadIdx.x - 1);
 				if (threadIdx.x == 31) timx = 0.0f;
+
 				tdmx = __ldg(&tran[3 * 32 + threadIdx.x]); //D_M
 				tdmx = __shfl_sync(0x1f, tdmx, threadIdx.x - 1);
 				if (threadIdx.x == 31) tdmx = 0.0f;
 
-				mmx = MMX[0] * __ldg(&mat[res_p + threadIdx.x])
+				mmx = MMX[0] * __ldg(&mat[res_p + threadIdx.x]);
 				mmx = __shfl_sync(0x1f, mmx, threadIdx.x - 1);
 				if (threadIdx.x == 31) mmx = 0.0f;
 
@@ -170,7 +174,7 @@ int e_lm, int QV, double mu, double lambda)
 					xC = xC * NJC_LOOP;
 					xJ = xJ * NJC_LOOP + xB * NJC_MOVE;
 					xN = xN * NJC_LOOP + xB * NJC_MOVE;
-					xEv[threadIdx.y] = xC * NJC_MOVE + xJ * NJC_LOOP;
+					xEv[threadIdx.y] = xC * 0.5f + xJ * 0.5f;
 
 					xBv[threadIdx.y] = xB;
 				}
@@ -182,12 +186,12 @@ int e_lm, int QV, double mu, double lambda)
 				if (threadIdx.x == 31) dcv = 0.0f;
 				for (q = Q - 1; q > 0; q--)
 				{
-					dcv = dcv * __ldg(&tran[q * 224 + 7 * 32 + threadIdx.x]);
+					dcv = dcv * __ldg(&tran[q * 224 + 7 * 32 + threadIdx.x]) + xE;
 					DMX[q] += dcv; 
 					dcv = DMX[q];
 					MMX[q] += xE;
 				}
-				dcv = dcv * __ldg(q * 224 + 7 * 32 + threadIdx.x]);
+				dcv = dcv * __ldg(&tran[q * 224 + 7 * 32 + threadIdx.x]);
 				dcv += xE;
 				DMX[q] = dcv;
 				MMX[q] += xE;
@@ -199,7 +203,7 @@ int e_lm, int QV, double mu, double lambda)
 				  	for (q = Q-1; q >= 0; q--)
 				    {
 				      dcv        = dcv * __ldg(&tran[q * 224 + 7 * 32 + threadIdx.x]);
-				      DMX(dpc,q) += dcv;
+				      DMX[q] += dcv;
 				    }
 				}
 
@@ -232,7 +236,7 @@ int e_lm, int QV, double mu, double lambda)
 						DMX[q] *= xB;
 					}
 
-					totscalep[threadIdx.y] += logf(xBv[threadIdx.y]);
+					totscale[threadIdx.y] += logf(xBv[threadIdx.y]);
 					xBv[threadIdx.y] = 1.0f;
 				}
 
@@ -246,7 +250,7 @@ int e_lm, int QV, double mu, double lambda)
 	for (q = 0; q < Q; q++)
 	{
 		mmx = MMX[q] * __ldg(&mat[res_s + threadIdx.x]);
-		xB += mmx * __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x])
+		xB += mmx * __ldg(&tran[q * 224 + 0 * 32 + threadIdx.x]);
 	}
 
 	xB = xB + __shfl_down_sync(0x1F, xB, 16);
@@ -259,10 +263,12 @@ int e_lm, int QV, double mu, double lambda)
 	{
 		xN = xB * NJC_MOVE + xN * NJC_LOOP;
 
-		sc[seqIdx] = totscale + log(xN);
+		sc[seqIdx] = totscale[threadIdx.y] + log(xN);
 	}
 
 	__syncthreads();
 
 	//end while
 }
+
+#endif /* _LOCALMEMORY_KERNEL_BWD_ */

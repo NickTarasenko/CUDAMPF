@@ -75,7 +75,7 @@ void RTC_FB(unsigned int number, const char* GPU_kernel1, const char* GPU_kernel
 	nvrtcProgram prog1;
 	nvrtcProgram prog2;
 
-	NVRTC_SAFE_CALL("nvrtcCreateProgram", nvrtcCreateProgram(&prog,			// prog
+	NVRTC_SAFE_CALL("nvrtcCreateProgram", nvrtcCreateProgram(&prog1,			// prog
 								 GPU_kernel1,		// buffer
 								 NULL,			// name: CUDA program name. name can be NULL; “default_program” is used when it is NULL.
 								 0,			// numHeaders (I put header file path with -I later)
@@ -137,19 +137,19 @@ void RTC_FB(unsigned int number, const char* GPU_kernel1, const char* GPU_kernel
     printf("--- NVRTC compile...\n");
     printf("--- Compile FWD...\n");
     /* NVRTC compile */
-	NVRTC_SAFE_CALL("nvrtcCompileProgram", nvrtcCompileProgram(prog,	// prog
+	NVRTC_SAFE_CALL("nvrtcCompileProgram", nvrtcCompileProgram(prog1,	// prog
 															   8,		// numOptions
 															   opts));	// options
 
-	prog1 = prog; prog = NULL;
+	//prog1 = prog; prog = NULL;
 
 	printf("--- Compile BWD...\n");
 
-	NVRTC_SAFE_CALL("nvrtcCompileProgram", nvrtcCompileProgram(prog,	// prog
+	NVRTC_SAFE_CALL("nvrtcCompileProgram", nvrtcCompileProgram(prog2,	// prog
 															   8,		// numOptions
 															   opts));	// options
 
-	prog2 = prog; prog = NULL;
+	//prog2 = prog; prog = NULL;
 
 	sdkStopTimer(&timer);
     printf("nvrtc Creat and Compile: %f (ms)\n", sdkGetTimerValue(&timer));
@@ -173,11 +173,11 @@ void RTC_FB(unsigned int number, const char* GPU_kernel1, const char* GPU_kernel
     sdkStartTimer(&timer);
 
 	size_t ptxsize;
-	NVRTC_SAFE_CALL("nvrtcGetPTXSize", nvrtcGetPTXSize(prog, &ptxsize));
+	NVRTC_SAFE_CALL("nvrtcGetPTXSize", nvrtcGetPTXSize(prog1, &ptxsize));
 	char *ptx = new char[ptxsize];
 	prog = prog1;
-	NVRTC_SAFE_CALL("nvrtcGetPTX", nvrtcGetPTX(prog, ptx));
-	NVRTC_SAFE_CALL("nvrtcDestroyProgram", nvrtcDestroyProgram(&prog));	// destroy program instance
+	NVRTC_SAFE_CALL("nvrtcGetPTX", nvrtcGetPTX(prog1, ptx));
+	NVRTC_SAFE_CALL("nvrtcDestroyProgram", nvrtcDestroyProgram(&prog1));	// destroy program instance
 
 	//printf("Got ptx = %s\n", ptx);
 
@@ -185,14 +185,14 @@ void RTC_FB(unsigned int number, const char* GPU_kernel1, const char* GPU_kernel
 	checkCudaErrors(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
 	checkCudaErrors(cuModuleGetFunction(&kernel1, module, "KERNEL"));	// return the handle of function, name is the same as real kernel function
 
-	prog = prog2;
+	//prog = prog2;
 
 	// For BWD
-	NVRTC_SAFE_CALL("nvrtcGetPTXSize", nvrtcGetPTXSize(prog, &ptxsize));
+	NVRTC_SAFE_CALL("nvrtcGetPTXSize", nvrtcGetPTXSize(prog2, &ptxsize));
 	ptx = new char[ptxsize];
 	prog = prog2;
-	NVRTC_SAFE_CALL("nvrtcGetPTX", nvrtcGetPTX(prog, ptx));
-	NVRTC_SAFE_CALL("nvrtcDestroyProgram", nvrtcDestroyProgram(&prog));	// destroy program instance
+	NVRTC_SAFE_CALL("nvrtcGetPTX", nvrtcGetPTX(prog2, ptx));
+	NVRTC_SAFE_CALL("nvrtcDestroyProgram", nvrtcDestroyProgram(&prog2));	// destroy program instance
 
 	//printf("Got ptx = %s\n", ptx);
 

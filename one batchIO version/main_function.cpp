@@ -293,9 +293,9 @@ int main(int argc, char* argv[])
 		
 		handle1 = read_kernel("LMEM_FWD.cuh");
 		
-		opt_Reg = 64;
+		opt_Reg = 32;
 		GRID = dim3(1, 1/*24*/, 1);
-		BLOCK = dim3(WARP_SIZE, 1/*32*/, 1);
+		BLOCK = dim3(WARP_SIZE, 8, 1);
 		RTC_FWD(number, handle1, hmm,
 				seq_1D, offset, seq_len,
 				iLen, sum, pValue,
@@ -310,7 +310,7 @@ int main(int argc, char* argv[])
 		
 		opt_Reg = 64;
 		GRID = dim3(1, 1/*24*/, 1);
-		BLOCK = dim3(WARP_SIZE, 1/*32*/, 1);
+		BLOCK = dim3(WARP_SIZE, 8/*32*/, 1);
 		RTC_FB(number, handle1, handle2, hmm,
 				seq_1D, offset, seq_len,
 				iLen, sum, pValue,

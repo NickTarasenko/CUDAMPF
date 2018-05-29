@@ -171,7 +171,8 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     sdkCreateTimer(&timer);
     sdkStartTimer(&timer);
 
-    
+    int temp = number;
+    //number = 2000;
     
     cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1);
    /* parameters for kernel funciton */
@@ -180,6 +181,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 					&(hmm->E_lm_fb), &(hmm->fbQ), &(hmm->MU[1]), &(hmm->LAMBDA[1])};
 
 					//printf("#$#$#$# MU = %f  LAMBDA = %f #$#$#$#", hmm->MU[1], hmm->LAMBDA[1]);
+					printf("total = %u; offset = %u;\n", number, offset[0]);
 
 	/* launch kernel */
         checkCudaErrors(cuLaunchKernel(	kernel,
@@ -192,6 +194,7 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
 	/* wait for kernel finish */
 	checkCudaErrors(cuCtxSynchronize());			/* block for a context's task to complete */
 
+    //number = temp;
     //printf("Oups..\n");
 
 	sdkStopTimer(&timer);
@@ -215,15 +218,15 @@ void RTC_FWD(unsigned int number, const char* GPU_kernel, HMMER_PROFILE *hmm,
     /* count the number of seqs pass */
 	unsigned long pass_vit = 0;			/* # of seqs pass vit */
 
-	/*for (int i = 0; i < number; i++)
+	for (int i = 0; i < number; i++)
 	{
-		if (pVal[i] <= F2)
-			pass_vit++;
+		//if (!(absf(pVal[i] - 0.0) < 1.0e-6))
+		//	pass_vit++;
+
+		//printf("fwd score %d: %f\n", i, pVal[i]);
 	}
 
-	printf("|			PASS VIT 			\n");
-	printf("|	 ALL	|	 FWD	|\n");
-	printf("|	%d  	|	%d  	|\n",  pass_vit, pass_vit);*/
+	//printf("Non-null: %d", pass_vit);
 
 	/************************/
 	/* 6. clean the context */
