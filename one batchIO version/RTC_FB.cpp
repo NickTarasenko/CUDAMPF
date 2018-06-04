@@ -231,8 +231,17 @@ void RTC_FB(unsigned int number, const char* GPU_kernel1, const char* GPU_kernel
 	/* wait for kernel finish */
 	checkCudaErrors(cuCtxSynchronize());			/* block for a context's task to complete */
 
+    printf("--- FWD done... \n");
 
-    cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1);
+
+   sdkStopTimer(&timer);
+   printf("FWD time: %f (ms)\n", sdkGetTimerValue(&timer));
+   sdkDeleteTimer(&timer);
+
+   sdkCreateTimer(&timer);
+   sdkStartTimer(&timer); 
+
+   cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1);
    /* parameters for kernel funciton */
 	void *arr2[] = { &d_seq, &number, &d_offset,
 					&scoreB, &d_len, &d_len_6r, &mat_v, &trans, &scale,
@@ -254,7 +263,7 @@ void RTC_FB(unsigned int number, const char* GPU_kernel1, const char* GPU_kernel
     //printf("Oups..\n");
 
 	sdkStopTimer(&timer);
-    printf("Kernel time: %f (ms)\n", sdkGetTimerValue(&timer));
+    printf("BWD time: %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);
 
     /*****************************************/

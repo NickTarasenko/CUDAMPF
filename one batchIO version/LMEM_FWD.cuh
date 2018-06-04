@@ -112,7 +112,7 @@ int e_lm, int QV, double mu, double lambda)
 					for (q = 0; q < Q; q++)
 					{
 						DMX[q] += dcv;
-						dcv = DMX[q] * __ldg(&tran[q * 224 + 7 * 32 + threadIdx.x]); //D_D
+						dcv = DMX[q] * __ldg(&tran[Q * 224 + q * 32 + threadIdx.x]); //D_D
 					}
 
 					//Serialization
@@ -127,7 +127,7 @@ int e_lm, int QV, double mu, double lambda)
 							sv = dcv + DMX[q];
 							cv = cv | ((sv >= DMX[q]) ? 1 : 0);
 							DMX[q] = sv;
-							dcv = dcv * __ldg(&tran[q * 224 + 7 * 32 + threadIdx.x]);
+							dcv = dcv * __ldg(&tran[Q * 224 + q * 32 + threadIdx.x]);
 						} 
 
 						if (cv == 0) break;
